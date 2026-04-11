@@ -1,0 +1,17 @@
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Infrastructure.deps.json
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Infrastructure.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Infrastructure.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Domain.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.csproj.AssemblyReference.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.AssemblyInfo.cs
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissi.BE495ABA.Up2Date
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\refint\Permissions.Infrastructure.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\ref\Permissions.Infrastructure.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Infrastructure.runtimeconfig.json
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.genruntimeconfig.cache

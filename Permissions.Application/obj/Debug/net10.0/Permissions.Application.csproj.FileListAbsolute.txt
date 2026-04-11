@@ -1,0 +1,15 @@
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\bin\Debug\net10.0\Permissions.Application.deps.json
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\bin\Debug\net10.0\Permissions.Application.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\bin\Debug\net10.0\Permissions.Application.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\bin\Debug\net10.0\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\bin\Debug\net10.0\Permissions.Domain.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.csproj.AssemblyReference.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.AssemblyInfoInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.AssemblyInfo.cs
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.csproj.CoreCompileInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissi.189F8B80.Up2Date
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\refint\Permissions.Application.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\ref\Permissions.Application.dll

@@ -1,0 +1,11 @@
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\bin\Debug\net10.0\Permissions.Domain.deps.json
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\bin\Debug\net10.0\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\bin\Debug\net10.0\Permissions.Domain.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.AssemblyInfoInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.AssemblyInfo.cs
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.csproj.CoreCompileInputs.cache
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\refint\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.pdb
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\ref\Permissions.Domain.dll

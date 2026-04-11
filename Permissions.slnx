@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Permissions.Api/Permissions.Api.csproj" />
+  <Project Path="Permissions.Application/Permissions.Application.csproj" />
+  <Project Path="Permissions.Domain/Permissions.Domain.csproj" />
+  <Project Path="Permissions.Infrastructure/Permissions.Infrastructure.csproj" />
+</Solution>
