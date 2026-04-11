@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "NilJvlgYfjM=",
+  "dgSpecHash": "9X8ejiCutnM=",
   "success": true,
   "projectFilePath": "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\Permissions\\Permissions.Application\\Permissions.Application.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "C:\\Users\\USER\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\10.0.5\\microsoft.extensions.dependencyinjection.abstractions.10.0.5.nupkg.sha512"
+  ],
   "logs": []
 }
