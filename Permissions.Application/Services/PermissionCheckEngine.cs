@@ -51,7 +51,7 @@ public sealed class PermissionCheckEngine
           cancellationToken);
 
       if (chain.Any(r => r.Name.Equals(request.Relation, StringComparison.OrdinalIgnoreCase)))
-        return new CheckPermissionResponse(true, $"Scoped role match via {assignment.Role.Name}");
+        return new CheckPermissionResponse(true, $"Scoped role match via {assignment.RoleId}");
     }
 
     // Step 3: check global role assignments
@@ -67,7 +67,7 @@ public sealed class PermissionCheckEngine
           cancellationToken);
 
       if (chain.Any(r => r.Name.Equals(request.Relation, StringComparison.OrdinalIgnoreCase)))
-        return new CheckPermissionResponse(true, $"Global role match via {assignment.Role.Name}");
+        return new CheckPermissionResponse(true, $"Global role match via {assignment.RoleId}");
     }
 
     return new CheckPermissionResponse(false, "No matching tuple or role assignment found");

@@ -30,29 +30,4 @@ public sealed record TupleKey
 
   public override string ToString() =>
       $"{ObjectType}:{ObjectId}#{Relation}@{SubjectType}:{SubjectId}";
-
-  public static TupleKey Parse(string tupleString)
-  {
-    ArgumentException.ThrowIfNullOrWhiteSpace(tupleString);
-
-    try
-    {
-      var objectPart = tupleString.Split('#')[0];
-      var relationAndSubject = tupleString.Split('#')[1];
-      var relation = relationAndSubject.Split('@')[0];
-      var subjectPart = relationAndSubject.Split('@')[1];
-
-      var objectType = objectPart.Split(':')[0];
-      var objectId = objectPart.Split(':')[1];
-      var subjectType = subjectPart.Split(':')[0];
-      var subjectId = subjectPart.Split(':')[1];
-
-      return new TupleKey(objectType, objectId, relation, subjectType, subjectId);
-    }
-    catch
-    {
-      throw new FormatException(
-          $"Invalid tuple format: '{tupleString}'. Expected format: objectType:objectId#relation@subjectType:subjectId");
-    }
-  }
 }
