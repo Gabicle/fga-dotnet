@@ -1,3 +1,5 @@
+using Permissions.Domain.Attributes;
+
 namespace Permissions.Application.DTOs;
 
 public sealed record CheckPermissionRequest(
@@ -5,4 +7,7 @@ public sealed record CheckPermissionRequest(
     string SubjectId,
     string Relation,
     string ObjectType,
-    string ObjectId);
+    string ObjectId,
+    SubjectAttributes? SubjectAttributes = null,
+    ResourceAttributes? ResourceAttributes = null,
+    EnvironmentAttributes? EnvironmentAttributes = null);
