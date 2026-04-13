@@ -21,7 +21,9 @@ public sealed class RelationTupleRepository : IRelationTupleRepository
         t.ObjectId == key.ObjectId &&
         t.Relation == key.Relation &&
         t.SubjectType == key.SubjectType &&
-        t.SubjectId == key.SubjectId,
+        t.SubjectId == key.SubjectId &&
+        t.SubjectRelation == key.SubjectRelation &&
+        (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow),
         cancellationToken);
   }
 
@@ -31,7 +33,9 @@ public sealed class RelationTupleRepository : IRelationTupleRepository
       CancellationToken cancellationToken = default)
   {
     return await _context.RelationTuples
-        .Where(t => t.ObjectType == objectType && t.ObjectId == objectId)
+        .Where(t => t.ObjectType == objectType &&
+                    t.ObjectId == objectId &&
+                    (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow))
         .AsNoTracking()
         .ToListAsync(cancellationToken);
   }
@@ -42,7 +46,9 @@ public sealed class RelationTupleRepository : IRelationTupleRepository
       CancellationToken cancellationToken = default)
   {
     return await _context.RelationTuples
-        .Where(t => t.SubjectType == subjectType && t.SubjectId == subjectId)
+        .Where(t => t.SubjectType == subjectType &&
+                    t.SubjectId == subjectId &&
+                    (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow))
         .AsNoTracking()
         .ToListAsync(cancellationToken);
   }
@@ -57,7 +63,24 @@ public sealed class RelationTupleRepository : IRelationTupleRepository
         .Where(t =>
             t.ObjectType == objectType &&
             t.ObjectId == objectId &&
-            t.Relation == relation)
+            t.Relation == relation &&
+            (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow))
+        .AsNoTracking()
+        .ToListAsync(cancellationToken);
+  }
+
+  public async Task<IReadOnlyList<RelationTuple>> GetBySubjectWithRelationAsync(
+      string subjectType,
+      string subjectId,
+      string subjectRelation,
+      CancellationToken cancellationToken = default)
+  {
+    return await _context.RelationTuples
+        .Where(t =>
+            t.SubjectType == subjectType &&
+            t.SubjectId == subjectId &&
+            t.SubjectRelation == subjectRelation &&
+            (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow))
         .AsNoTracking()
         .ToListAsync(cancellationToken);
   }

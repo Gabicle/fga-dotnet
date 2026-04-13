@@ -7,7 +7,6 @@ public sealed class PermissionsDbContext : DbContext
 {
   public DbSet<RelationTuple> RelationTuples => Set<RelationTuple>();
   public DbSet<Role> Roles => Set<Role>();
-  public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>();
 
   public PermissionsDbContext(DbContextOptions<PermissionsDbContext> options)
       : base(options) { }

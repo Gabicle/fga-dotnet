@@ -8,68 +8,103 @@ public sealed class PermissionCheckEngine
 {
   private readonly IRelationTupleRepository _tupleRepository;
   private readonly IRoleRepository _roleRepository;
-  private readonly IRoleAssignmentRepository _roleAssignmentRepository;
 
   public PermissionCheckEngine(
       IRelationTupleRepository tupleRepository,
-      IRoleRepository roleRepository,
-      IRoleAssignmentRepository roleAssignmentRepository)
+      IRoleRepository roleRepository)
   {
     _tupleRepository = tupleRepository;
     _roleRepository = roleRepository;
-    _roleAssignmentRepository = roleAssignmentRepository;
   }
 
   public async Task<CheckPermissionResponse> CheckAsync(
       CheckPermissionRequest request,
       CancellationToken cancellationToken = default)
   {
-    // Step 1: direct tuple check
-    var key = new TupleKey(
+    var visited = new HashSet<string>();
+    var allowed = await ExpandAsync(
         request.ObjectType,
         request.ObjectId,
         request.Relation,
         request.SubjectType,
-        request.SubjectId);
-
-    var directMatch = await _tupleRepository.ExistsAsync(key, cancellationToken);
-    if (directMatch)
-      return new CheckPermissionResponse(true, "Direct tuple match");
-
-    // Step 2: check role assignments scoped to this resource
-    var scopedAssignments = await _roleAssignmentRepository.GetBySubjectAndResourceAsync(
-        request.SubjectType,
         request.SubjectId,
-        request.ObjectType,
-        request.ObjectId,
+        visited,
         cancellationToken);
 
-    foreach (var assignment in scopedAssignments.Where(a => !a.IsExpired()))
+    return allowed
+        ? new CheckPermissionResponse(true, "Allowed via tuple expansion")
+        : new CheckPermissionResponse(false, "No matching tuple found");
+  }
+
+  private async Task<bool> ExpandAsync(
+      string objectType,
+      string objectId,
+      string relation,
+      string subjectType,
+      string subjectId,
+      HashSet<string> visited,
+      CancellationToken cancellationToken)
+  {
+    // Guard against infinite loops in circular role definitions
+    var key = $"{objectType}:{objectId}#{relation}@{subjectType}:{subjectId}";
+    if (!visited.Add(key)) return false;
+
+    // Step 1: direct tuple match
+    var directKey = new TupleKey(objectType, objectId, relation, subjectType, subjectId);
+    if (await _tupleRepository.ExistsAsync(directKey, cancellationToken))
+      return true;
+
+    // Step 2: expand tuples where subject is a role member
+    // e.g. report:42#viewer@role:editor#member
+    // means "anyone who is a member of role:editor can view report:42"
+    var indirectTuples = await _tupleRepository.GetByObjectAndRelationAsync(
+        objectType, objectId, relation, cancellationToken);
+
+    foreach (var tuple in indirectTuples.Where(t => t.SubjectRelation is not null))
     {
-      var chain = await _roleRepository.GetInheritanceChainAsync(
-          assignment.RoleId,
+      // tuple.SubjectType = "role", tuple.SubjectId = "editor", tuple.SubjectRelation = "member"
+      // check if subjectType:subjectId has tuple.SubjectRelation on tuple.SubjectType:tuple.SubjectId
+      var isRoleMember = await ExpandAsync(
+          tuple.SubjectType,
+          tuple.SubjectId,
+          tuple.SubjectRelation!,
+          subjectType,
+          subjectId,
+          visited,
           cancellationToken);
 
-      if (chain.Any(r => r.Name.Equals(request.Relation, StringComparison.OrdinalIgnoreCase)))
-        return new CheckPermissionResponse(true, $"Scoped role match via {assignment.RoleId}");
+      if (isRoleMember) return true;
     }
 
-    // Step 3: check global role assignments
-    var globalAssignments = await _roleAssignmentRepository.GetBySubjectAsync(
-        request.SubjectType,
-        request.SubjectId,
-        cancellationToken);
-
-    foreach (var assignment in globalAssignments.Where(a => a.IsGlobal() && !a.IsExpired()))
+    // Step 3: walk role inheritance chain
+    // if role:editor#member@user:7 and editor's parent is viewer
+    // then user:7 inherits viewer permissions
+    if (objectType == "role")
     {
-      var chain = await _roleRepository.GetInheritanceChainAsync(
-          assignment.RoleId,
-          cancellationToken);
+      var role = await _roleRepository.GetByNameAsync(
+          objectId.ToUpperInvariant(), cancellationToken);
 
-      if (chain.Any(r => r.Name.Equals(request.Relation, StringComparison.OrdinalIgnoreCase)))
-        return new CheckPermissionResponse(true, $"Global role match via {assignment.RoleId}");
+      if (role?.ParentRoleId is not null)
+      {
+        var parentRole = await _roleRepository.GetByIdAsync(
+            role.ParentRoleId.Value, cancellationToken);
+
+        if (parentRole is not null)
+        {
+          var inheritedAccess = await ExpandAsync(
+              objectType,
+              parentRole.Name,
+              relation,
+              subjectType,
+              subjectId,
+              visited,
+              cancellationToken);
+
+          if (inheritedAccess) return true;
+        }
+      }
     }
 
-    return new CheckPermissionResponse(false, "No matching tuple or role assignment found");
+    return false;
   }
 }

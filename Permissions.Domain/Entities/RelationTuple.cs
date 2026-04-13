@@ -10,6 +10,7 @@ public sealed class RelationTuple
   public string SubjectId { get; private set; } = null!;
   public string? SubjectRelation { get; private set; }
   public DateTime CreatedAt { get; private set; }
+  public DateTime? ExpiresAt { get; private set; }
 
   private RelationTuple() { }
 
@@ -19,13 +20,17 @@ public sealed class RelationTuple
       string relation,
       string subjectType,
       string subjectId,
-      string? subjectRelation = null)
+      string? subjectRelation = null,
+      DateTime? expiresAt = null)
   {
     ArgumentException.ThrowIfNullOrWhiteSpace(objectType);
     ArgumentException.ThrowIfNullOrWhiteSpace(objectId);
     ArgumentException.ThrowIfNullOrWhiteSpace(relation);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectType);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+
+    if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow)
+      throw new InvalidOperationException("ExpiresAt must be a future date.");
 
     return new RelationTuple
     {
@@ -36,9 +41,13 @@ public sealed class RelationTuple
       SubjectType = subjectType,
       SubjectId = subjectId,
       SubjectRelation = subjectRelation,
-      CreatedAt = DateTime.UtcNow
+      CreatedAt = DateTime.UtcNow,
+      ExpiresAt = expiresAt
     };
   }
+
+  public bool IsExpired() =>
+      ExpiresAt.HasValue && ExpiresAt.Value <= DateTime.UtcNow;
 
   public override string ToString() =>
       $"{ObjectType}:{ObjectId}#{Relation}@{SubjectType}:{SubjectId}" +

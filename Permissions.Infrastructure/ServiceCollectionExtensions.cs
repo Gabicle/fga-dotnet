@@ -17,7 +17,6 @@ public static class ServiceCollectionExtensions
 
     services.AddScoped<IRelationTupleRepository, RelationTupleRepository>();
     services.AddScoped<IRoleRepository, RoleRepository>();
-    services.AddScoped<IRoleAssignmentRepository, RoleAssignmentRepository>();
 
     return services;
   }

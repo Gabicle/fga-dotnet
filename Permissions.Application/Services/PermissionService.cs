@@ -26,15 +26,16 @@ public sealed class PermissionService
   }
 
   public async Task GrantAsync(
-      GrantPermissionRequest request,
-      CancellationToken cancellationToken = default)
+     GrantPermissionRequest request,
+     CancellationToken cancellationToken = default)
   {
     var key = new TupleKey(
         request.ObjectType,
         request.ObjectId,
         request.Relation,
         request.SubjectType,
-        request.SubjectId);
+        request.SubjectId,
+        request.SubjectRelation);
 
     var exists = await _tupleRepository.ExistsAsync(key, cancellationToken);
     if (exists) return;
@@ -44,7 +45,8 @@ public sealed class PermissionService
         request.ObjectId,
         request.Relation,
         request.SubjectType,
-        request.SubjectId);
+        request.SubjectId,
+        request.SubjectRelation);
 
     await _tupleRepository.AddAsync(tuple, cancellationToken);
   }
