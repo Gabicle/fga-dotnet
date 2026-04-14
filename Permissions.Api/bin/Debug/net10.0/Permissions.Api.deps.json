@@ -430,6 +430,18 @@
           }
         }
       },
+      "QueryProfiler.Core/1.0.0": {
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.5",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1"
+        },
+        "runtime": {
+          "lib/net10.0/QueryProfiler.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
       "System.CodeDom/6.0.0": {
         "runtime": {
           "lib/net6.0/System.CodeDom.dll": {
@@ -526,18 +538,6 @@
         },
         "runtime": {
           "Permissions.Infrastructure.dll": {
-            "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.0.0"
-          }
-        }
-      },
-      "QueryProfiler.Core/1.0.0": {
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "10.0.5",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1"
-        },
-        "runtime": {
-          "QueryProfiler.Core.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
           }
@@ -684,6 +684,13 @@
       "path": "npgsql.entityframeworkcore.postgresql/10.0.1",
       "hashPath": "npgsql.entityframeworkcore.postgresql.10.0.1.nupkg.sha512"
     },
+    "QueryProfiler.Core/1.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Pe58QUpR6KPZl7/D/ev4YlFOOZmW1TO6BdD+4Hf9dLTm7oByS2yEYWeTDs5z/A/HbXILvJLvrftiP8HNDJVlFw==",
+      "path": "queryprofiler.core/1.0.0",
+      "hashPath": "queryprofiler.core.1.0.0.nupkg.sha512"
+    },
     "System.CodeDom/6.0.0": {
       "type": "package",
       "serviceable": true,
@@ -744,11 +751,6 @@
       "sha512": ""
     },
     "Permissions.Infrastructure/1.0.0": {
-      "type": "project",
-      "serviceable": false,
-      "sha512": ""
-    },
-    "QueryProfiler.Core/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

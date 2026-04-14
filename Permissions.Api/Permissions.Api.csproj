@@ -12,12 +12,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="QueryProfiler.Core" Version="1.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Permissions.Application\Permissions.Application.csproj" />
     <ProjectReference Include="..\Permissions.Infrastructure\Permissions.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\query-profiler\QueryProfiler.Core\QueryProfiler.Core.csproj" />
   </ItemGroup>
 
 </Project>

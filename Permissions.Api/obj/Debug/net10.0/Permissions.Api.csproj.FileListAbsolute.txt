@@ -128,4 +128,3 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Api\bin\De
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Api\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Api\obj\Debug\net10.0\Permissions.Api.sourcelink.json
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Api\bin\Debug\net10.0\QueryProfiler.Core.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Api\bin\Debug\net10.0\QueryProfiler.Core.pdb

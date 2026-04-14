@@ -16,5 +16,3 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastruc
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\Permissions.Infrastructure.runtimeconfig.json
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.genruntimeconfig.cache
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\obj\Debug\net10.0\Permissions.Infrastructure.sourcelink.json
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\QueryProfiler.Core.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Infrastructure\bin\Debug\net10.0\QueryProfiler.Core.pdb
