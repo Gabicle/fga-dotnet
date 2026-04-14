@@ -5,4 +5,5 @@
   <Project Path="Permissions.Domain.Tests/Permissions.Domain.Tests.csproj" />
   <Project Path="Permissions.Domain/Permissions.Domain.csproj" />
   <Project Path="Permissions.Infrastructure/Permissions.Infrastructure.csproj" />
+  <Project Path="Permissions.Integration.Tests/Permissions.Integration.Tests.csproj" />
 </Solution>

@@ -9,3 +9,4 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\refint\Permissions.Domain.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.pdb
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\ref\Permissions.Domain.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain\obj\Debug\net10.0\Permissions.Domain.sourcelink.json

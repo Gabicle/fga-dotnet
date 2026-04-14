@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: permissions
+          POSTGRES_DB: permissions_integration_test
         ports:
           - 5432:5432
         options: >-
@@ -41,4 +41,6 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run tests
+        env:
+          INTEGRATION_TEST_CONNECTION_STRING: "Host=localhost;Port=5432;Database=permissions_integration_test;Username=postgres;Password=postgres"
         run: dotnet test --no-build --configuration Release --verbosity normal

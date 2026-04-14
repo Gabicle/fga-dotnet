@@ -98,3 +98,4 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain.Tes
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain.Tests\obj\Debug\net10.0\Permissions.Domain.Tests.pdb
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain.Tests\obj\Debug\net10.0\Permissions.Domain.Tests.genruntimeconfig.cache
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain.Tests\obj\Debug\net10.0\ref\Permissions.Domain.Tests.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Domain.Tests\obj\Debug\net10.0\Permissions.Domain.Tests.sourcelink.json

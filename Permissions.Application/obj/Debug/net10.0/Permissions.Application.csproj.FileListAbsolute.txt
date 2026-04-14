@@ -13,3 +13,4 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Applicatio
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\refint\Permissions.Application.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.pdb
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\ref\Permissions.Application.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Application\obj\Debug\net10.0\Permissions.Application.sourcelink.json
