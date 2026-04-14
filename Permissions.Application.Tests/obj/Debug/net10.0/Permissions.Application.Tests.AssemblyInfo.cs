@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Permissions.Application.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4342a64027396531c0622f7f4f88f7718f55e90f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8a6f5e1dd6f1e1cb13e5505ae716f70f0eb81da2")]
 [assembly: System.Reflection.AssemblyProductAttribute("Permissions.Application.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Permissions.Application.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
