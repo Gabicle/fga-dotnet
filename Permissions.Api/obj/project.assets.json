@@ -698,13 +698,28 @@
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "10.0.5",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1",
-          "Permissions.Domain": "1.0.0"
+          "Permissions.Domain": "1.0.0",
+          "QueryProfiler.Core": "1.0.0"
         },
         "compile": {
           "bin/placeholder/Permissions.Infrastructure.dll": {}
         },
         "runtime": {
           "bin/placeholder/Permissions.Infrastructure.dll": {}
+        }
+      },
+      "QueryProfiler.Core/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.5",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1"
+        },
+        "compile": {
+          "bin/placeholder/QueryProfiler.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/QueryProfiler.Core.dll": {}
         }
       }
     }
@@ -2249,6 +2264,11 @@
       "type": "project",
       "path": "../Permissions.Infrastructure/Permissions.Infrastructure.csproj",
       "msbuildProject": "../Permissions.Infrastructure/Permissions.Infrastructure.csproj"
+    },
+    "QueryProfiler.Core/1.0.0": {
+      "type": "project",
+      "path": "../../query-profiler/QueryProfiler.Core/QueryProfiler.Core.csproj",
+      "msbuildProject": "../../query-profiler/QueryProfiler.Core/QueryProfiler.Core.csproj"
     }
   },
   "projectFileDependencyGroups": {
@@ -2256,7 +2276,8 @@
       "Microsoft.AspNetCore.OpenApi >= 10.0.5",
       "Microsoft.EntityFrameworkCore.Design >= 10.0.5",
       "Permissions.Application >= 1.0.0",
-      "Permissions.Infrastructure >= 1.0.0"
+      "Permissions.Infrastructure >= 1.0.0",
+      "QueryProfiler.Core >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -2296,6 +2317,9 @@
             },
             "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\Permissions\\Permissions.Infrastructure\\Permissions.Infrastructure.csproj": {
               "projectPath": "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\Permissions\\Permissions.Infrastructure\\Permissions.Infrastructure.csproj"
+            },
+            "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\query-profiler\\QueryProfiler.Core\\QueryProfiler.Core.csproj": {
+              "projectPath": "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\query-profiler\\QueryProfiler.Core\\QueryProfiler.Core.csproj"
             }
           }
         }

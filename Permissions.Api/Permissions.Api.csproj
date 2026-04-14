@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Permissions.Application\Permissions.Application.csproj" />
     <ProjectReference Include="..\Permissions.Infrastructure\Permissions.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\query-profiler\QueryProfiler.Core\QueryProfiler.Core.csproj" />
   </ItemGroup>
 
 </Project>

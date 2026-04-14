@@ -11,7 +11,8 @@
           "Microsoft.EntityFrameworkCore": "10.0.5",
           "Microsoft.EntityFrameworkCore.Design": "10.0.5",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1",
-          "Permissions.Domain": "1.0.0"
+          "Permissions.Domain": "1.0.0",
+          "QueryProfiler.Core": "1.0.0"
         },
         "runtime": {
           "Permissions.Infrastructure.dll": {}
@@ -601,6 +602,18 @@
             "fileVersion": "1.0.0.0"
           }
         }
+      },
+      "QueryProfiler.Core/1.0.0": {
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "10.0.5",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1"
+        },
+        "runtime": {
+          "QueryProfiler.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
       }
     }
   },
@@ -842,6 +855,11 @@
       "hashPath": "system.composition.typedparts.9.0.0.nupkg.sha512"
     },
     "Permissions.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "QueryProfiler.Core/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

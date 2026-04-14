@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Permissions.Domain\Permissions.Domain.csproj" />
+    <ProjectReference Include="..\..\query-profiler\QueryProfiler.Core\QueryProfiler.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
