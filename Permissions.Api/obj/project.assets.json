@@ -543,11 +543,45 @@
           }
         }
       },
-      "QueryProfiler.Core/1.0.0": {
+      "prometheus-net/8.2.1": {
+        "type": "package",
+        "compile": {
+          "lib/net7.0/Prometheus.NetStandard.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net7.0/Prometheus.NetStandard.dll": {
+            "related": ".xml"
+          }
+        }
+      },
+      "prometheus-net.AspNetCore/8.2.1": {
+        "type": "package",
+        "dependencies": {
+          "prometheus-net": "8.2.1"
+        },
+        "compile": {
+          "lib/net6.0/Prometheus.AspNetCore.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net6.0/Prometheus.AspNetCore.dll": {
+            "related": ".xml"
+          }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
+      },
+      "QueryProfiler.Core/2.0.0": {
         "type": "package",
         "dependencies": {
           "Microsoft.EntityFrameworkCore": "10.0.5",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1"
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1",
+          "prometheus-net": "8.2.1",
+          "prometheus-net.AspNetCore": "8.2.1"
         },
         "compile": {
           "lib/net10.0/QueryProfiler.Core.dll": {}
@@ -712,7 +746,7 @@
           "Microsoft.EntityFrameworkCore": "10.0.5",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.1",
           "Permissions.Domain": "1.0.0",
-          "QueryProfiler.Core": "1.0.0"
+          "QueryProfiler.Core": "2.0.0"
         },
         "compile": {
           "bin/placeholder/Permissions.Infrastructure.dll": {}
@@ -2063,14 +2097,50 @@
         "postgresql.png"
       ]
     },
-    "QueryProfiler.Core/1.0.0": {
-      "sha512": "Pe58QUpR6KPZl7/D/ev4YlFOOZmW1TO6BdD+4Hf9dLTm7oByS2yEYWeTDs5z/A/HbXILvJLvrftiP8HNDJVlFw==",
+    "prometheus-net/8.2.1": {
+      "sha512": "3wVgdEPOCBF752s2xps5T+VH+c9mJK8S8GKEDg49084P6JZMumTZI5Te6aJ9MQpX0sx7om6JOnBpIi7ZBmmiDQ==",
       "type": "package",
-      "path": "queryprofiler.core/1.0.0",
+      "path": "prometheus-net/8.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net462/Prometheus.NetStandard.dll",
+        "lib/net462/Prometheus.NetStandard.xml",
+        "lib/net6.0/Prometheus.NetStandard.dll",
+        "lib/net6.0/Prometheus.NetStandard.xml",
+        "lib/net7.0/Prometheus.NetStandard.dll",
+        "lib/net7.0/Prometheus.NetStandard.xml",
+        "lib/netstandard2.0/Prometheus.NetStandard.dll",
+        "lib/netstandard2.0/Prometheus.NetStandard.xml",
+        "prometheus-net-logo.png",
+        "prometheus-net.8.2.1.nupkg.sha512",
+        "prometheus-net.nuspec"
+      ]
+    },
+    "prometheus-net.AspNetCore/8.2.1": {
+      "sha512": "/4TfTvbwIDqpaKTiWvEsjUywiHYF9zZvGZF5sK15avoDsUO/WPQbKsF8TiMaesuphdFQPK2z52P0zk6j26V0rQ==",
+      "type": "package",
+      "path": "prometheus-net.aspnetcore/8.2.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "lib/net6.0/Prometheus.AspNetCore.dll",
+        "lib/net6.0/Prometheus.AspNetCore.xml",
+        "prometheus-net-logo.png",
+        "prometheus-net.aspnetcore.8.2.1.nupkg.sha512",
+        "prometheus-net.aspnetcore.nuspec"
+      ]
+    },
+    "QueryProfiler.Core/2.0.0": {
+      "sha512": "jdnSnRUPEBXVdbkc61ljO8uarIleajTTVb0a4/iFLeyI/2NnpINMOLxu7jK5vdZdqccC7M88WO8FcgdV7t5vCA==",
+      "type": "package",
+      "path": "queryprofiler.core/2.0.0",
       "files": [
         ".nupkg.metadata",
         "lib/net10.0/QueryProfiler.Core.dll",
-        "queryprofiler.core.1.0.0.nupkg.sha512",
+        "queryprofiler.core.2.0.0.nupkg.sha512",
         "queryprofiler.core.nuspec"
       ]
     },
@@ -2282,7 +2352,7 @@
       "Microsoft.EntityFrameworkCore.Design >= 10.0.5",
       "Permissions.Application >= 1.0.0",
       "Permissions.Infrastructure >= 1.0.0",
-      "QueryProfiler.Core >= 1.0.0"
+      "QueryProfiler.Core >= 2.0.0"
     ]
   },
   "packageFolders": {
@@ -2302,6 +2372,7 @@
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
+        "C:\\Users\\USER\\Downloads\\programmer\\c\\projects\\Permissions\\NuGet.Config",
         "C:\\Users\\USER\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
@@ -2355,7 +2426,7 @@
           },
           "QueryProfiler.Core": {
             "target": "Package",
-            "version": "[1.0.0, )"
+            "version": "[2.0.0, )"
           }
         },
         "imports": [

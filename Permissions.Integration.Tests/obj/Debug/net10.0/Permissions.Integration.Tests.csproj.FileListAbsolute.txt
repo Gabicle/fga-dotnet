@@ -21,16 +21,7 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integratio
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Abstractions.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Design.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.EntityFrameworkCore.Relational.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Caching.Abstractions.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Caching.Memory.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Configuration.Abstractions.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.DependencyInjection.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.DependencyModel.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Logging.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Logging.Abstractions.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Options.dll
-C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.Extensions.Primitives.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.TestPlatform.CoreUtilities.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.TestPlatform.PlatformAbstractions.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Microsoft.VisualStudio.TestPlatform.ObjectModel.dll
@@ -201,3 +192,5 @@ C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integratio
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\obj\Debug\net10.0\Permissions.Integration.Tests.genruntimeconfig.cache
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\obj\Debug\net10.0\ref\Permissions.Integration.Tests.dll
 C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\QueryProfiler.Core.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Prometheus.NetStandard.dll
+C:\Users\USER\Downloads\programmer\c\projects\Permissions\Permissions.Integration.Tests\bin\Debug\net10.0\Prometheus.AspNetCore.dll

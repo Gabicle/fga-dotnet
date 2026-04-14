@@ -1,7 +1,6 @@
 using Permissions.Application;
 using Permissions.Infrastructure;
 using QueryProfiler.Core;
-using QueryProfiler.Core.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,18 +17,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseQueryProfiler();
 app.MapControllers();
-
-// Profiler endpoint — shows aggregated query stats
-app.MapGet("/metrics/snapshot", (IQueryMetricsStore store) =>
-    Results.Ok(store.GetSnapshot()));
-
-// Prometheus scrape endpoint
-app.MapGet("/metrics", (IQueryMetricsStore store) =>
-{
-    var stats = store.GetSnapshot();
-    var output = PrometheusFormatter.Format(stats);
-    return Results.Text(output, PrometheusFormatter.ContentType);
-});
 
 app.Run();
