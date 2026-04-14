@@ -194,4 +194,33 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
 
     Assert.False(result.Allowed);
   }
+
+  [Fact]
+  public async Task Grant_WithExpiry_ThenCheck_AfterExpiry_ReturnsDenied()
+  {
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "viewer", "report", "42",
+        ExpiresAt: DateTime.UtcNow.AddMilliseconds(50)));
+
+    await Task.Delay(100);
+
+    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
+        "user", "7", "viewer", "report", "42"));
+
+    Assert.False(result.Allowed);
+  }
+
+  [Fact]
+  public async Task Grant_WithFutureExpiry_ThenCheck_ReturnsAllowed()
+  {
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "viewer", "report", "42",
+        ExpiresAt: DateTime.UtcNow.AddDays(1)));
+
+    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
+        "user", "7", "viewer", "report", "42"));
+
+    Assert.True(result.Allowed);
+  }
 }
+

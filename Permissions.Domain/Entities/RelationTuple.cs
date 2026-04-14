@@ -29,7 +29,7 @@ public sealed class RelationTuple
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectType);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
 
-    if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow)
+    if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow.AddSeconds(-1))
       throw new InvalidOperationException("ExpiresAt must be a future date.");
 
     return new RelationTuple

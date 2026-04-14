@@ -6,4 +6,5 @@ public sealed record GrantPermissionRequest(
     string Relation,
     string ObjectType,
     string ObjectId,
-    string? SubjectRelation = null);
+    string? SubjectRelation = null,
+    DateTime? ExpiresAt = null);
