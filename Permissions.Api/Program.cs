@@ -24,4 +24,12 @@ app.MapControllers();
 app.MapGet("/metrics/snapshot", (IQueryMetricsStore store) =>
     Results.Ok(store.GetSnapshot()));
 
+// Prometheus scrape endpoint
+app.MapGet("/metrics", (IQueryMetricsStore store) =>
+{
+    var stats = store.GetSnapshot();
+    var output = PrometheusFormatter.Format(stats);
+    return Results.Text(output, PrometheusFormatter.ContentType);
+});
+
 app.Run();
