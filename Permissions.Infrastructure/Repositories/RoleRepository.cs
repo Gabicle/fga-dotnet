@@ -65,6 +65,12 @@ public sealed class RoleRepository : IRoleRepository
     await _context.SaveChangesAsync(cancellationToken);
   }
 
+  public async Task UpdateAsync(Role role, CancellationToken cancellationToken = default)
+  {
+    _context.Roles.Update(role);
+    await _context.SaveChangesAsync(cancellationToken);
+  }
+
   public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
   {
     var role = await _context.Roles

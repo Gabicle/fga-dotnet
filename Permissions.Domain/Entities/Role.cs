@@ -40,5 +40,9 @@ public sealed class Role
     ParentRole = parent;
   }
 
+  public void SetParentId(Guid parentRoleId)
+  {
+    ParentRoleId = parentRoleId;
+  }
   public override string ToString() => Name;
 }
