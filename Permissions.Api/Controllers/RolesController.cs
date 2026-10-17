@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Permissions.Api.Security;
 using Permissions.Application.DTOs;
 using Permissions.Application.Services;
 
@@ -6,6 +8,7 @@ namespace Permissions.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = ApiKeyPolicies.Admin)]
 public sealed class RolesController : ControllerBase
 {
   private readonly RoleService _roleService;

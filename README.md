@@ -140,6 +140,10 @@ INDEX ix_relation_tuples_expires_at
 **Prerequisites:** .NET 10, Docker
 
 ```bash
+# Use two distinct, randomly generated 256-bit service credentials.
+export Permissions__ApiKeys__Check="$(openssl rand -base64 32)"
+export Permissions__ApiKeys__Admin="$(openssl rand -base64 32)"
+
 # Start PostgreSQL
 docker run --name permissions-db \
   -e POSTGRES_PASSWORD=postgres \
@@ -158,11 +162,19 @@ dotnet run --project Permissions.Api
 
 API available at `http://localhost:5031`. OpenAPI schema at `http://localhost:5031/openapi/v1.json`.
 
+The API refuses to start unless both API keys are configured as distinct Base64-encoded 32-byte values; it also rejects all-identical-byte keys. Key strength cannot be proven from supplied bytes. Generate each key independently with a cryptographically secure random generator, such as the `openssl rand` commands above. Supply keys through environment variables or a secure configuration provider; do not put deployed keys in appsettings files or source control. Use HTTPS for network traffic. Rotate a key by changing its server configuration and restarting the API, then update the corresponding client. The development OpenAPI endpoint also requires a valid service key.
+
+### Service authentication
+
+Send `Authorization: ApiKey <base64-key>` on every request. The check key has only the `permissions.check` capability and can call `POST /api/permissions/check`. The separate admin key has only `permissions.admin` and can grant or revoke tuples and use every `/api/roles` endpoint, including reads. Other endpoints require an authenticated service by default. Missing or invalid credentials receive HTTP 401; a valid key without the required capability receives HTTP 403.
+
+The key authenticates the **calling service**. It does not authenticate the end user named by `subjectType` and `subjectId` in a check request. A caller must establish the end user's identity in its own trusted authentication flow and set those fields in server-side code. Tool arguments, prompts, model output, and other user-controlled text must not choose or override that identity. This API trusts an authenticated check client to assert the subject and any ABAC attributes; it does not independently verify them. Keep the check key only in that trusted backend, and restrict the admin key to administrative processes.
+
 ---
 
 ## API
 
-All operations use POST. Structured request bodies rather than URL parameters - the same approach taken by OpenFGA.
+Permission operations use POST with structured request bodies. Role reads use GET.
 
 ### Grant a permission
 

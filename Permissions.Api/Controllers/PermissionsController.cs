@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Permissions.Api.Security;
 using Permissions.Application.DTOs;
 using Permissions.Application.Services;
 using Permissions.Domain.ValueObjects;
@@ -17,6 +19,7 @@ public sealed class PermissionsController : ControllerBase
   }
 
   [HttpPost("check")]
+  [Authorize(Policy = ApiKeyPolicies.Check)]
   [ProducesResponseType(typeof(CheckPermissionResponse), StatusCodes.Status200OK)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> Check(
@@ -28,6 +31,7 @@ public sealed class PermissionsController : ControllerBase
   }
 
   [HttpPost("grant")]
+  [Authorize(Policy = ApiKeyPolicies.Admin)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> Grant(
@@ -39,6 +43,7 @@ public sealed class PermissionsController : ControllerBase
   }
 
   [HttpPost("revoke")]
+  [Authorize(Policy = ApiKeyPolicies.Admin)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   public async Task<IActionResult> Revoke(
