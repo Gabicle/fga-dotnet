@@ -39,6 +39,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
     Services = services.BuildServiceProvider();
 
+    using (var validationScope = Services.CreateScope())
+      validationScope.ServiceProvider.GetRequiredService<AbacEvaluator>()
+          .ValidateRequiredPolicies();
+
     // Run migrations against the test database
     using var scope = Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<PermissionsDbContext>();

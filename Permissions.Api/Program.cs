@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Permissions.Api.Security;
 using Permissions.Application;
+using Permissions.Application.Policies;
 using Permissions.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,8 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 app.Services.GetRequiredService<ApiKeyCredentials>();
+using (var scope = app.Services.CreateScope())
+    scope.ServiceProvider.GetRequiredService<AbacEvaluator>().ValidateRequiredPolicies();
 
 if (app.Environment.IsDevelopment())
     app.MapOpenApi().RequireAuthorization();

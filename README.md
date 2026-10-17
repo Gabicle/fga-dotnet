@@ -97,7 +97,8 @@ unavailable or failed check as denied access, never as an allow decision.
 
 **Layer 2 - ABAC policy evaluation**
 
-If tuple expansion allows, attribute-based policies run as a second gate. All policies must pass:
+If tuple expansion allows, server-owned requirements determine whether ABAC runs as a
+second gate. Required policies must all pass:
 
 ```
 RegionMatchPolicy     - subject.region must match resource.region
@@ -105,7 +106,32 @@ ResourceStatusPolicy  - deny if resource.status is "locked" or "archived"
 SensitivityLevelPolicy - subject.clearanceLevel must be >= resource.sensitivityLevel
 ```
 
-ABAC is optional per request - if no attributes are provided, the tuple result is returned directly.
+The current required operations are:
+
+| Checked operation | Required policies | Required fields |
+| --- | --- | --- |
+| `report/viewer` | RegionMatchPolicy, SensitivityLevelPolicy | Subject and resource identities, regions, subject clearance level, resource sensitivity level |
+| `report/editor` | RegionMatchPolicy, ResourceStatusPolicy, SensitivityLevelPolicy | The same fields, plus resource status |
+
+For `report/editor`, supported status values are `draft`, `locked`, and `archived`.
+`locked` and `archived` deny editing; an absent or unsupported status is a malformed
+request. The server refuses to start if a required policy is not registered.
+Requirements are selected from the top-level checked `objectType` and `relation`;
+nested attribute identities must agree with the checked subject and object. An
+operation without a registered requirement is **ReBAC-only**, even when attributes
+are supplied. New sensitive operations must be explicitly added to the server-owned
+requirement map before relying on ABAC. Policy names and status values are generic
+examples, not a complete resource lifecycle schema.
+
+The authenticated checking client must choose the canonical `objectType` and
+`relation` for the operation it will actually perform. Trusted application code
+must make that choice; model-generated content and arbitrary user input must not
+select or override it. These names are exact-match identifiers: case variants
+and aliases are distinct authorization relationships and cannot reuse a canonical
+tuple grant. A separately granted variant is an unlisted, ReBAC-only operation
+unless it has its own ABAC requirement. Consumers must explicitly register every
+sensitive operation that needs ABAC. This service cannot independently verify
+that the caller chose the correct business operation.
 
 ---
 
@@ -173,7 +199,7 @@ The API refuses to start unless both API keys are configured as distinct Base64-
 
 Send `Authorization: ApiKey <base64-key>` on every request. The check key has only the `permissions.check` capability and can call `POST /api/permissions/check`. The separate admin key has only `permissions.admin` and can grant or revoke tuples and use every `/api/roles` endpoint, including reads. Other endpoints require an authenticated service by default. Missing or invalid credentials receive HTTP 401; a valid key without the required capability receives HTTP 403.
 
-The key authenticates the **calling service**. It does not authenticate the end user named by `subjectType` and `subjectId` in a check request. A caller must establish the end user's identity in its own trusted authentication flow and set those fields in server-side code. Tool arguments, prompts, model output, and other user-controlled text must not choose or override that identity. This API trusts an authenticated check client to assert the subject and any ABAC attributes; it does not independently verify them. Keep the check key only in that trusted backend, and restrict the admin key to administrative processes.
+The key authenticates the **calling service**. It does not authenticate the end user named by `subjectType` and `subjectId` in a check request. A caller must establish the end user's identity in its own trusted authentication flow and set those fields in server-side code. The authenticated checking service supplies asserted ABAC values from authoritative application data. For AgentFence, the Python backend must construct those values from trusted user and resource records; tool arguments, prompts, model output, and other LLM-generated text must never select or override the subject, resource identity, operation identity (`objectType` and `relation`), or security attributes. Matching nested identities only checks internal request consistency; it does not prove attribute authenticity or protect against a compromised Python backend or compromised checking service. Keep the check key only in that trusted backend, and restrict the admin key to administrative processes.
 
 ---
 
@@ -224,7 +250,7 @@ Content-Type: application/json
   "subjectType": "user",
   "subjectId": "7",
   "relation": "viewer",
-  "objectType": "report",
+  "objectType": "document",
   "objectId": "42"
 }
 ```
@@ -234,6 +260,11 @@ Response:
 ```json
 { "allowed": true, "reason": "Allowed via tuple expansion" }
 ```
+
+This example assumes a matching `document:42#viewer@user:7` tuple. Documents
+have no required ABAC registration in this example, so the check is ReBAC-only.
+The same request for `report/viewer` now returns HTTP 400 without required ABAC
+attributes, even if a matching tuple exists.
 
 ### Check with ABAC attributes
 
@@ -268,6 +299,13 @@ Response:
 ```json
 { "allowed": false, "reason": "Denied by ABAC policy: RegionMatchPolicy" }
 ```
+
+For checks, HTTP 200 with `allowed: false` is an authorization denial. Missing or
+inconsistent required attributes return HTTP 400. Policy evaluation or storage
+failures return an error, not an allow response. The calling service must treat
+every non-successful check response as denied access. Existing `report/viewer`
+and `report/editor` callers must now supply the required attributes; other
+unlisted operations retain ReBAC-only behavior.
 
 ### Revoke a permission
 

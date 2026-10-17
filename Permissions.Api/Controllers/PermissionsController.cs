@@ -26,8 +26,15 @@ public sealed class PermissionsController : ControllerBase
       [FromBody] CheckPermissionRequest request,
       CancellationToken cancellationToken)
   {
-    var result = await _permissionService.CheckAsync(request, cancellationToken);
-    return Ok(result);
+    try
+    {
+      var result = await _permissionService.CheckAsync(request, cancellationToken);
+      return Ok(result);
+    }
+    catch (ArgumentException ex)
+    {
+      return BadRequest(new { error = ex.Message });
+    }
   }
 
   [HttpPost("grant")]

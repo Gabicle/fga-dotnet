@@ -11,6 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Moq;
 using Permissions.Application.DTOs;
+using Permissions.Application.Policies;
+using Permissions.Application.Policies.BuiltIn;
+using Permissions.Domain.Attributes;
 using Permissions.Domain.Entities;
 using Permissions.Domain.Repositories;
 using Permissions.Domain.ValueObjects;
@@ -21,7 +24,11 @@ public sealed class AuthenticationHttpTests
 {
   private static readonly object CheckBody = new {
     subjectType = "user", subjectId = "alice", relation = "viewer",
-    objectType = "report", objectId = "one"
+    objectType = "report", objectId = "one",
+    subjectAttributes = new { subjectType = "user", subjectId = "alice",
+      region = "eu-west", clearanceLevel = 3 },
+    resourceAttributes = new { resourceType = "report", resourceId = "one",
+      region = "eu-west", sensitivityLevel = 2 }
   };
 
   [Fact]
@@ -119,11 +126,246 @@ public sealed class AuthenticationHttpTests
         .Content.ReadFromJsonAsync<CheckPermissionResponse>();
     var denied = await (await client.PostAsJsonAsync("/api/permissions/check", new {
       subjectType = "user", subjectId = "bob", relation = "viewer",
-      objectType = "report", objectId = "one"
+      objectType = "report", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "bob",
+        region = "eu-west", clearanceLevel = 3 },
+      resourceAttributes = new { resourceType = "report", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2 }
     })).Content.ReadFromJsonAsync<CheckPermissionResponse>();
 
     Assert.True(allowed?.Allowed);
     Assert.False(denied?.Allowed);
+  }
+
+  [Fact]
+  public async Task RebacOnlyDocumentCheckWorksWithoutAttributes()
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("document", "one", "viewer", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var allowed = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation = "viewer",
+      objectType = "document", objectId = "one"
+    });
+    var denied = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "bob", relation = "viewer",
+      objectType = "document", objectId = "one"
+    });
+    Assert.True((await allowed.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+    Assert.False((await denied.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Theory]
+  [InlineData("Report", "viewer")]
+  [InlineData("report", "Viewer")]
+  [InlineData("reports", "viewer")]
+  public async Task VariantCannotReuseCanonicalReportGrant(string objectType, string relation)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("report", "one", "viewer", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var response = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation, objectType, objectId = "one"
+    });
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.False((await response.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Theory]
+  [InlineData("Report", "viewer")]
+  [InlineData("report", "Viewer")]
+  [InlineData("reports", "viewer")]
+  public async Task SeparatelyGrantedVariantRemainsRebacOnly(string objectType, string relation)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create(objectType, "one", relation, "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var response = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation, objectType, objectId = "one"
+    });
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.True((await response.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Theory]
+  [InlineData("viewer")]
+  [InlineData("editor")]
+  public async Task CanonicalReportOperationsStillRequireAndEnforceAbac(string relation)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("report", "one", relation, "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var missing = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation,
+      objectType = "report", objectId = "one"
+    });
+    var denied = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation,
+      objectType = "report", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "alice",
+        region = "us-east", clearanceLevel = 3 },
+      resourceAttributes = new { resourceType = "report", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2, status = "draft" }
+    });
+    var allowed = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation,
+      objectType = "report", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "alice",
+        region = "eu-west", clearanceLevel = 3 },
+      resourceAttributes = new { resourceType = "report", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2, status = "draft" }
+    });
+
+    Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+    Assert.Equal(HttpStatusCode.OK, denied.StatusCode);
+    Assert.False((await denied.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+    Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    Assert.True((await allowed.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Fact]
+  public async Task RebacOnlyOptionalAttributesDoNotActivatePolicies()
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("document", "one", "viewer", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var allowed = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation = "viewer",
+      objectType = "document", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "alice",
+        region = "us-east", clearanceLevel = 1 },
+      resourceAttributes = new { resourceType = "document", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2, status = "locked" }
+    });
+    var noGrant = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "bob", relation = "viewer",
+      objectType = "document", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "bob",
+        region = "eu-west", clearanceLevel = 3 },
+      resourceAttributes = new { resourceType = "document", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2 }
+    });
+
+    Assert.Equal(HttpStatusCode.OK, allowed.StatusCode);
+    Assert.True((await allowed.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+    Assert.Equal(HttpStatusCode.OK, noGrant.StatusCode);
+    Assert.False((await noGrant.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Theory]
+  [InlineData("subject")]
+  [InlineData("resource")]
+  [InlineData("resource-type")]
+  public async Task RebacOnlySuppliedIdentityMismatchIsRejected(string mismatch)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("document", "one", "viewer", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var response = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation = "viewer",
+      objectType = "document", objectId = "one",
+      subjectAttributes = new { subjectType = "user",
+        subjectId = mismatch == "subject" ? "bob" : "alice" },
+      resourceAttributes = new {
+        resourceType = mismatch == "resource-type" ? "report" : "document",
+        resourceId = mismatch == "resource" ? "other" : "one"
+      }
+    });
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Theory]
+  [InlineData("subject-object")]
+  [InlineData("resource-object")]
+  [InlineData("subject-region")]
+  [InlineData("sensitivity")]
+  [InlineData("subject-identity")]
+  [InlineData("resource-identity")]
+  [InlineData("resource-type")]
+  [InlineData("unsupported-status")]
+  public async Task RequiredAbacMalformedInputsReturnBadRequest(string scenario)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("report", "one", "editor", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+    object? subject = scenario == "subject-object" ? null : new {
+      subjectType = "user", subjectId = scenario == "subject-identity" ? "bob" : "alice",
+      region = scenario == "subject-region" ? null : "eu-west", clearanceLevel = (int?)3
+    };
+    object? resource = scenario == "resource-object" ? null : new {
+      resourceType = scenario == "resource-type" ? "document" : "report",
+      resourceId = scenario == "resource-identity" ? "other" : "one",
+      region = "eu-west", sensitivityLevel = scenario == "sensitivity" ? null : (int?)2,
+      status = scenario == "unsupported-status" ? "unrecognized" : "draft"
+    };
+
+    var response = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation = "editor",
+      objectType = "report", objectId = "one",
+      subjectAttributes = subject, resourceAttributes = resource
+    });
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+  }
+
+  [Theory]
+  [InlineData("cross-region", "viewer")]
+  [InlineData("low-clearance", "viewer")]
+  [InlineData("locked", "editor")]
+  [InlineData("archived", "editor")]
+  public async Task RequiredAbacPolicyDenialsReturnAllowedFalse(string scenario, string relation)
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("report", "one", relation, "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+    var response = await client.PostAsJsonAsync("/api/permissions/check", new {
+      subjectType = "user", subjectId = "alice", relation,
+      objectType = "report", objectId = "one",
+      subjectAttributes = new { subjectType = "user", subjectId = "alice",
+        region = scenario == "cross-region" ? "us-east" : "eu-west",
+        clearanceLevel = scenario == "low-clearance" ? 1 : 3 },
+      resourceAttributes = new { resourceType = "report", resourceId = "one",
+        region = "eu-west", sensitivityLevel = 2,
+        status = scenario is "locked" or "archived" ? scenario : "draft" }
+    });
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.False((await response.Content.ReadFromJsonAsync<CheckPermissionResponse>())!.Allowed);
+  }
+
+  [Fact]
+  public void MissingRequiredPolicyFailsAtApiStartup()
+  {
+    using var factory = new AuthApiFactory { RemoveViewerSensitivityPolicy = true };
+    var error = Assert.Throws<InvalidOperationException>(() => _ = factory.Server);
+    Assert.Contains("Required ABAC policy registration", error.Message);
+  }
+
+  [Fact]
+  public async Task EvaluatorExceptionDoesNotReturnAuthorizationAllow()
+  {
+    using var factory = new AuthApiFactory { AddThrowingPolicy = true };
+    factory.Tuples.Add(RelationTuple.Create("report", "one", "viewer", "user", "alice"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.CheckKey);
+
+    var response = await client.PostAsJsonAsync("/api/permissions/check", CheckBody);
+    Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
   }
 
   [Fact]
@@ -243,6 +485,8 @@ public sealed class AuthenticationHttpTests
     public string AdminKey { get; set; } = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
     public List<RelationTuple> Tuples { get; } = [];
     public List<Role> Roles { get; } = [];
+    public bool RemoveViewerSensitivityPolicy { get; set; }
+    public bool AddThrowingPolicy { get; set; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -254,6 +498,16 @@ public sealed class AuthenticationHttpTests
           }));
       builder.ConfigureTestServices(services =>
       {
+        if (RemoveViewerSensitivityPolicy)
+        {
+          var registration = services.Single(descriptor =>
+              descriptor.ServiceType == typeof(IAbacPolicy) &&
+              descriptor.ImplementationInstance is SensitivityLevelPolicy policy &&
+              policy.ResourceType == "report" && policy.Relation == "viewer");
+          services.Remove(registration);
+        }
+        if (AddThrowingPolicy)
+          services.AddSingleton<IAbacPolicy>(new ThrowingPolicy());
         services.AddControllers().AddApplicationPart(typeof(FallbackProbeController).Assembly);
         services.RemoveAll<IRelationTupleRepository>();
         services.RemoveAll<IRoleRepository>();
@@ -318,6 +572,15 @@ public sealed class AuthenticationHttpTests
         tuple.ObjectType == key.ObjectType && tuple.ObjectId == key.ObjectId &&
         tuple.Relation == key.Relation && tuple.SubjectType == key.SubjectType &&
         tuple.SubjectId == key.SubjectId && tuple.SubjectRelation == key.SubjectRelation;
+  }
+
+  private sealed class ThrowingPolicy : IAbacPolicy
+  {
+    public string Name => "ThrowingPolicy";
+    public string ResourceType => "report";
+    public string Relation => "viewer";
+    public bool Evaluate(SubjectAttributes subject, ResourceAttributes resource,
+        EnvironmentAttributes environment) => throw new InvalidOperationException("Policy failed");
   }
 }
 

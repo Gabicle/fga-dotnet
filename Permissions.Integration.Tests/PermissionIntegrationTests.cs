@@ -18,14 +18,23 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     _services = fixture.Services;
   }
 
+  private static CheckPermissionRequest ReportCheck(string subjectId) => new(
+      "user", subjectId, "viewer", "report", "42",
+      SubjectAttributes: new SubjectAttributes {
+        SubjectType = "user", SubjectId = subjectId, Region = "eu-west", ClearanceLevel = 3
+      },
+      ResourceAttributes: new ResourceAttributes {
+        ResourceType = "report", ResourceId = "42", Region = "eu-west",
+        SensitivityLevel = 2, Status = "draft"
+      });
+
   [Fact]
   public async Task Grant_ThenCheck_DirectTuple_ReturnsAllowed()
   {
     await PermissionService.GrantAsync(new GrantPermissionRequest(
         "user", "7", "viewer", "report", "42"));
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.True(result.Allowed);
     Assert.Equal("Allowed via tuple expansion", result.Reason);
@@ -40,8 +49,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     await PermissionService.RevokeAsync(
         new Domain.ValueObjects.TupleKey("report", "42", "viewer", "user", "7"));
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.False(result.Allowed);
   }
@@ -55,8 +63,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     await PermissionService.GrantAsync(new GrantPermissionRequest(
         "user", "7", "viewer", "report", "42"));
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.True(result.Allowed);
   }
@@ -64,10 +71,61 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
   [Fact]
   public async Task Check_NoTuple_ReturnsDenied()
   {
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.False(result.Allowed);
+  }
+
+  [Fact]
+  public async Task ReportRequiresAttributesWhileUnlistedDocumentRemainsRebacOnly()
+  {
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "viewer", "report", "42"));
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "viewer", "document", "42"));
+
+    await Assert.ThrowsAsync<ArgumentException>(() => PermissionService.CheckAsync(
+        new CheckPermissionRequest("user", "7", "viewer", "report", "42")));
+    Assert.True((await PermissionService.CheckAsync(new CheckPermissionRequest(
+        "user", "7", "viewer", "document", "42"))).Allowed);
+    Assert.True((await PermissionService.CheckAsync(ReportCheck("7"))).Allowed);
+  }
+
+  [Fact]
+  public async Task ReportViewerRejectsSpoofedNestedResourceType()
+  {
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "viewer", "report", "42"));
+    var valid = ReportCheck("7");
+    var spoofed = valid with {
+      ResourceAttributes = new ResourceAttributes {
+        ResourceType = "document", ResourceId = "42", Region = "eu-west",
+        SensitivityLevel = 2
+      }
+    };
+
+    await Assert.ThrowsAsync<ArgumentException>(() => PermissionService.CheckAsync(spoofed));
+    Assert.True((await PermissionService.CheckAsync(valid)).Allowed);
+  }
+
+  [Theory]
+  [InlineData("locked", false)]
+  [InlineData("archived", false)]
+  [InlineData("draft", true)]
+  public async Task ReportEditorEnforcesPersistedGrantAndStatus(string status, bool expectedAllowed)
+  {
+    await PermissionService.GrantAsync(new GrantPermissionRequest(
+        "user", "7", "editor", "report", "42"));
+    var viewer = ReportCheck("7");
+    var editor = viewer with {
+      Relation = "editor",
+      ResourceAttributes = new ResourceAttributes {
+        ResourceType = "report", ResourceId = "42", Region = "eu-west",
+        SensitivityLevel = 2, Status = status
+      }
+    };
+
+    Assert.Equal(expectedAllowed, (await PermissionService.CheckAsync(editor)).Allowed);
   }
 
   [Fact]
@@ -82,8 +140,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         "role", "editor", "viewer", "report", "42",
         SubjectRelation: "member"));
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.True(result.Allowed);
   }
@@ -101,8 +158,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         SubjectRelation: "member"));
 
     // user:99 is NOT a member of role:editor
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "99", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("99"));
 
     Assert.False(result.Allowed);
   }
@@ -119,13 +175,15 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         {
           SubjectType = "user",
           SubjectId = "7",
-          Region = "eu-west"
+          Region = "eu-west",
+          ClearanceLevel = 3
         },
         ResourceAttributes: new ResourceAttributes
         {
           ResourceType = "report",
           ResourceId = "42",
-          Region = "eu-west"
+          Region = "eu-west",
+          SensitivityLevel = 2
         }));
 
     Assert.True(result.Allowed);
@@ -143,13 +201,15 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         {
           SubjectType = "user",
           SubjectId = "7",
-          Region = "us-east"
+          Region = "us-east",
+          ClearanceLevel = 3
         },
         ResourceAttributes: new ResourceAttributes
         {
           ResourceType = "report",
           ResourceId = "42",
-          Region = "eu-west"
+          Region = "eu-west",
+          SensitivityLevel = 2
         }));
 
     Assert.False(result.Allowed);
@@ -172,14 +232,16 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         {
           SubjectType = "user",
           SubjectId = "7",
-          Region = "eu-west"
+          Region = "eu-west",
+          ClearanceLevel = 3
         },
         ResourceAttributes: new ResourceAttributes
         {
           ResourceType = "report",
           ResourceId = "42",
           Region = "eu-west",
-          Status = "locked"
+          Status = "locked",
+          SensitivityLevel = 2
         }));
 
     Assert.False(result.Allowed);
@@ -200,8 +262,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     // Wait for it to expire
     await Task.Delay(10);
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.False(result.Allowed);
   }
@@ -215,8 +276,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
 
     await Task.Delay(100);
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.False(result.Allowed);
   }
@@ -228,8 +288,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
         "user", "7", "viewer", "report", "42",
         ExpiresAt: DateTime.UtcNow.AddDays(1)));
 
-    var result = await PermissionService.CheckAsync(new CheckPermissionRequest(
-        "user", "7", "viewer", "report", "42"));
+    var result = await PermissionService.CheckAsync(ReportCheck("7"));
 
     Assert.True(result.Allowed);
   }
@@ -248,7 +307,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     await PermissionService.GrantAsync(new GrantPermissionRequest("role", "viewer", "viewer", "report", "42", "member"));
     await PermissionService.GrantAsync(new GrantPermissionRequest("role", "admin", "admin", "report", "42", "member"));
 
-    Assert.True((await PermissionService.CheckAsync(new CheckPermissionRequest("user", "7", "viewer", "report", "42"))).Allowed);
+    Assert.True((await PermissionService.CheckAsync(ReportCheck("7"))).Allowed);
     Assert.False((await PermissionService.CheckAsync(new CheckPermissionRequest("user", "8", "admin", "report", "42"))).Allowed);
   }
 
@@ -276,7 +335,7 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
     await PermissionService.GrantAsync(new GrantPermissionRequest("user", "7", "member", "role", "auditor"));
     await PermissionService.GrantAsync(new GrantPermissionRequest("role", "viewer", "viewer", "report", "42", "member"));
 
-    var request = new CheckPermissionRequest("user", "7", "viewer", "report", "42");
+    var request = ReportCheck("7");
     Assert.False((await PermissionService.CheckAsync(request)).Allowed);
     await RoleService.AssignParentAsync(auditor.Id, viewer.Id);
     Assert.True((await PermissionService.CheckAsync(request)).Allowed);
@@ -301,8 +360,8 @@ public sealed class PermissionIntegrationTests : IntegrationTestBase
       await PermissionService.GrantAsync(new GrantPermissionRequest("user", "7", "member", "role", "editor"));
       await PermissionService.GrantAsync(new GrantPermissionRequest("user", "8", "viewer", "report", "42"));
 
-      Assert.False((await PermissionService.CheckAsync(new CheckPermissionRequest("user", "7", "viewer", "report", "42"))).Allowed);
-      Assert.True((await PermissionService.CheckAsync(new CheckPermissionRequest("user", "8", "viewer", "report", "42"))).Allowed);
+      Assert.False((await PermissionService.CheckAsync(ReportCheck("7"))).Allowed);
+      Assert.True((await PermissionService.CheckAsync(ReportCheck("8"))).Allowed);
     }
     finally
     {

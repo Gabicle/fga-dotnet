@@ -14,13 +14,15 @@ public sealed class AbacEvaluatorTests
     var evaluator = new AbacEvaluator([]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42" },
         _defaultEnvironment);
 
     Assert.False(result.IsApplicable);
-    Assert.True(result.IsAllowed);
+    Assert.False(result.IsAllowed);
+    Assert.Null(result.DeniedByPolicy);
   }
 
   [Fact]
@@ -29,11 +31,13 @@ public sealed class AbacEvaluatorTests
     var evaluator = new AbacEvaluator([new RegionMatchPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", Region = "eu-west" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Region = "eu-west" },
         _defaultEnvironment);
 
+    Assert.True(result.IsApplicable);
     Assert.True(result.IsAllowed);
   }
 
@@ -43,11 +47,13 @@ public sealed class AbacEvaluatorTests
     var evaluator = new AbacEvaluator([new RegionMatchPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", Region = "us-east" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Region = "eu-west" },
         _defaultEnvironment);
 
+    Assert.True(result.IsApplicable);
     Assert.False(result.IsAllowed);
     Assert.Equal("RegionMatchPolicy", result.DeniedByPolicy);
   }
@@ -58,6 +64,7 @@ public sealed class AbacEvaluatorTests
     var evaluator = new AbacEvaluator([new RegionMatchPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", Region = null },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Region = "eu-west" },
@@ -73,6 +80,7 @@ public sealed class AbacEvaluatorTests
         [new ResourceStatusPolicy("report", "editor", "locked", "archived")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "editor",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Status = "draft" },
@@ -88,6 +96,7 @@ public sealed class AbacEvaluatorTests
         [new ResourceStatusPolicy("report", "editor", "locked", "archived")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "editor",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Status = "locked" },
@@ -104,6 +113,7 @@ public sealed class AbacEvaluatorTests
         [new ResourceStatusPolicy("report", "editor", "locked", "archived")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "editor",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7" },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", Status = "archived" },
@@ -120,6 +130,7 @@ public sealed class AbacEvaluatorTests
         [new SensitivityLevelPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", ClearanceLevel = 4 },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", SensitivityLevel = 3 },
@@ -135,6 +146,7 @@ public sealed class AbacEvaluatorTests
         [new SensitivityLevelPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", ClearanceLevel = 2 },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", SensitivityLevel = 4 },
@@ -151,6 +163,7 @@ public sealed class AbacEvaluatorTests
         [new SensitivityLevelPolicy("report", "viewer")]);
 
     var result = evaluator.Evaluate(
+        "report",
         "viewer",
         new SubjectAttributes { SubjectType = "user", SubjectId = "7", ClearanceLevel = 3 },
         new ResourceAttributes { ResourceType = "report", ResourceId = "42", SensitivityLevel = 3 },
@@ -169,6 +182,7 @@ public sealed class AbacEvaluatorTests
     ]);
 
     var result = evaluator.Evaluate(
+        "report",
         "editor",
         new SubjectAttributes
         {
@@ -200,6 +214,7 @@ public sealed class AbacEvaluatorTests
     ]);
 
     var result = evaluator.Evaluate(
+        "report",
         "editor",
         new SubjectAttributes
         {
@@ -220,5 +235,27 @@ public sealed class AbacEvaluatorTests
 
     Assert.False(result.IsAllowed);
     Assert.Equal("SensitivityLevelPolicy", result.DeniedByPolicy);
+  }
+
+  [Fact]
+  public void Evaluate_RequiredPolicyMissing_ReturnsNotApplicable()
+  {
+    var evaluator = new AbacEvaluator([new RegionMatchPolicy("report", "viewer")]);
+    var result = evaluator.Evaluate("report", "viewer",
+        new SubjectAttributes { SubjectType = "user", SubjectId = "7", Region = "eu-west", ClearanceLevel = 3 },
+        new ResourceAttributes { ResourceType = "report", ResourceId = "42", Region = "eu-west", SensitivityLevel = 2 },
+        _defaultEnvironment,
+        AbacRequirements.For("report", "viewer"));
+
+    Assert.False(result.IsApplicable);
+    Assert.False(result.IsAllowed);
+    Assert.Null(result.DeniedByPolicy);
+  }
+
+  [Fact]
+  public void ValidateRequiredPolicies_MissingRegistration_Throws()
+  {
+    var evaluator = new AbacEvaluator([new RegionMatchPolicy("report", "viewer")]);
+    Assert.Throws<InvalidOperationException>(evaluator.ValidateRequiredPolicies);
   }
 }

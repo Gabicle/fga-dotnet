@@ -27,21 +27,30 @@ public sealed class PermissionService
       CheckPermissionRequest request,
       CancellationToken cancellationToken = default)
   {
+    var requirement = AbacRequirements.For(request.ObjectType, request.Relation);
+    ValidateAttributeIdentities(request, requirement is not null);
+    if (requirement is not null)
+      ValidateRequiredAttributes(request, requirement);
+
     // Layer 1: Zanzibar tuple expansion
     var tupleResult = await _checkEngine.CheckAsync(request, cancellationToken);
     if (!tupleResult.Allowed)
       return tupleResult;
 
-    // Layer 2: ABAC policy evaluation
-    // If no attributes provided, skip ABAC
-    if (request.SubjectAttributes is null || request.ResourceAttributes is null)
+    // Operations without a server-owned requirement remain ReBAC-only.
+    if (requirement is null)
       return tupleResult;
 
     var abacResult = _abacEvaluator.Evaluate(
+        request.ObjectType,
         request.Relation,
-        request.SubjectAttributes,
-        request.ResourceAttributes,
-        request.EnvironmentAttributes ?? new EnvironmentAttributes());
+        request.SubjectAttributes!,
+        request.ResourceAttributes!,
+        request.EnvironmentAttributes ?? new EnvironmentAttributes(),
+        requirement);
+
+    if (!abacResult.IsApplicable)
+      throw new InvalidOperationException("Required ABAC policy is unavailable.");
 
     if (!abacResult.IsAllowed)
       return new CheckPermissionResponse(
@@ -49,6 +58,54 @@ public sealed class PermissionService
           $"Denied by ABAC policy: {abacResult.DeniedByPolicy}");
 
     return tupleResult;
+  }
+
+  private static void ValidateAttributeIdentities(
+      CheckPermissionRequest request, bool identitiesRequired)
+  {
+    if (request.SubjectAttributes is { } subject)
+    {
+      ValidateIdentity(subject.SubjectType, request.SubjectType, identitiesRequired);
+      ValidateIdentity(subject.SubjectId, request.SubjectId, identitiesRequired);
+    }
+
+    if (request.ResourceAttributes is { } resource)
+    {
+      ValidateIdentity(resource.ResourceType, request.ObjectType, identitiesRequired);
+      ValidateIdentity(resource.ResourceId, request.ObjectId, identitiesRequired);
+    }
+  }
+
+  private static void ValidateIdentity(string? supplied, string expected, bool required)
+  {
+    if (string.IsNullOrWhiteSpace(supplied))
+    {
+      if (required)
+        throw new ArgumentException("Required ABAC identity is missing.");
+      return;
+    }
+
+    if (!string.Equals(supplied, expected, StringComparison.Ordinal))
+      throw new ArgumentException("ABAC identity does not match the checked identity.");
+  }
+
+  private static void ValidateRequiredAttributes(
+      CheckPermissionRequest request, AbacRequirements.Requirement requirement)
+  {
+    var subject = request.SubjectAttributes;
+    var resource = request.ResourceAttributes;
+    if (subject is null || resource is null)
+      throw new ArgumentException("Required ABAC attribute objects are missing.");
+
+    if (string.IsNullOrWhiteSpace(subject.Region) ||
+        string.IsNullOrWhiteSpace(resource.Region) ||
+        !subject.ClearanceLevel.HasValue || !resource.SensitivityLevel.HasValue)
+      throw new ArgumentException("Required ABAC policy attributes are missing.");
+
+    if (requirement.RequiresStatus &&
+        (string.IsNullOrWhiteSpace(resource.Status) ||
+         !AbacRequirements.IsSupportedReportStatus(resource.Status)))
+      throw new ArgumentException("Resource status is missing or unsupported for this operation.");
   }
 
   public async Task GrantAsync(
