@@ -272,10 +272,36 @@ public sealed class AuthenticationHttpTests
             .Returns(Task.CompletedTask);
 
         var roles = new Mock<IRoleRepository>();
+        roles.Setup(x => x.ExecuteHierarchyMutationAsync(
+                It.IsAny<Func<CancellationToken, Task<bool>>>(), It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, Task<bool>> operation, CancellationToken token) => operation(token));
+        roles.Setup(x => x.ExecuteHierarchyMutationAsync(
+                It.IsAny<Func<CancellationToken, Task<RoleResponse>>>(), It.IsAny<CancellationToken>()))
+            .Returns((Func<CancellationToken, Task<RoleResponse>> operation, CancellationToken token) => operation(token));
         roles.Setup(x => x.GetByNameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string name, CancellationToken _) => Roles.FirstOrDefault(r => r.NormalizedName == name));
         roles.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Guid id, CancellationToken _) => Roles.FirstOrDefault(r => r.Id == id));
+        roles.Setup(x => x.GetChildrenByParentIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) =>
+                (IReadOnlyList<Role>)Roles.Where(r => r.ParentRoleId == id).ToList());
+        roles.Setup(x => x.GetInheritanceChainAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) =>
+            {
+              var chain = new List<Role>();
+              var visited = new HashSet<Guid>();
+              var current = Roles.FirstOrDefault(r => r.Id == id);
+              while (current is not null)
+              {
+                if (!visited.Add(current.Id))
+                  throw new InvalidOperationException("Role hierarchy contains a cycle.");
+                chain.Add(current);
+                current = current.ParentRoleId.HasValue
+                    ? Roles.FirstOrDefault(r => r.Id == current.ParentRoleId.Value)
+                    : null;
+              }
+              return (IReadOnlyList<Role>)chain;
+            });
         roles.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => (IReadOnlyList<Role>)Roles.ToList());
         roles.Setup(x => x.AddAsync(It.IsAny<Role>(), It.IsAny<CancellationToken>()))

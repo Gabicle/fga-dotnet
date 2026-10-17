@@ -17,6 +17,16 @@ public sealed class RoleService
      CreateRoleRequest request,
      CancellationToken cancellationToken = default)
   {
+    if (request.ParentRoleId.HasValue)
+      return await _roleRepository.ExecuteHierarchyMutationAsync(
+          token => CreateCoreAsync(request, token), cancellationToken);
+
+    return await CreateCoreAsync(request, cancellationToken);
+  }
+
+  private async Task<RoleResponse> CreateCoreAsync(
+      CreateRoleRequest request, CancellationToken cancellationToken)
+  {
     var existing = await _roleRepository.GetByNameAsync(
         request.Name.ToUpperInvariant(), cancellationToken);
 
@@ -35,6 +45,7 @@ public sealed class RoleService
         throw new InvalidOperationException(
             $"Parent role '{request.ParentRoleId}' not found.");
 
+      await _roleRepository.GetInheritanceChainAsync(parentRole.Id, cancellationToken);
       role.SetParentId(parentRole.Id);
     }
 
@@ -64,11 +75,26 @@ public sealed class RoleService
      Guid parentRoleId,
      CancellationToken cancellationToken = default)
   {
+    await _roleRepository.ExecuteHierarchyMutationAsync(async token =>
+    {
+      await AssignParentCoreAsync(roleId, parentRoleId, token);
+      return true;
+    }, cancellationToken);
+  }
+
+  private async Task AssignParentCoreAsync(
+      Guid roleId, Guid parentRoleId, CancellationToken cancellationToken)
+  {
     var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken)
         ?? throw new InvalidOperationException($"Role '{roleId}' not found.");
 
     var parentRole = await _roleRepository.GetByIdAsync(parentRoleId, cancellationToken)
         ?? throw new InvalidOperationException($"Parent role '{parentRoleId}' not found.");
+
+    var parentChain = await _roleRepository.GetInheritanceChainAsync(
+        parentRole.Id, cancellationToken);
+    if (parentChain.Any(ancestor => ancestor.Id == role.Id))
+      throw new InvalidOperationException("A role cannot be assigned one of its descendants as a parent.");
 
     role.SetParent(parentRole);
     await _roleRepository.UpdateAsync(role, cancellationToken);

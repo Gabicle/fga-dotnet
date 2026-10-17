@@ -13,6 +13,14 @@ public sealed class RoleServiceTests
 
   public RoleServiceTests()
   {
+    _roleRepo.Setup(r => r.ExecuteHierarchyMutationAsync(
+            It.IsAny<Func<CancellationToken, Task<RoleResponse>>>(), It.IsAny<CancellationToken>()))
+        .Returns((Func<CancellationToken, Task<RoleResponse>> operation, CancellationToken token) =>
+            operation(token));
+    _roleRepo.Setup(r => r.ExecuteHierarchyMutationAsync(
+            It.IsAny<Func<CancellationToken, Task<bool>>>(), It.IsAny<CancellationToken>()))
+        .Returns((Func<CancellationToken, Task<bool>> operation, CancellationToken token) =>
+            operation(token));
     _service = new RoleService(_roleRepo.Object);
   }
 
@@ -112,5 +120,55 @@ public sealed class RoleServiceTests
     var result = await _service.GetByIdAsync(Guid.NewGuid());
 
     Assert.Null(result);
+  }
+
+  [Fact]
+  public async Task AssignParentAsync_SelfParentIsRejectedWithoutUpdate()
+  {
+    var role = Role.Create("viewer");
+    _roleRepo.Setup(r => r.GetByIdAsync(role.Id, default)).ReturnsAsync(role);
+    _roleRepo.Setup(r => r.GetInheritanceChainAsync(role.Id, default))
+        .ReturnsAsync([role]);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        _service.AssignParentAsync(role.Id, role.Id));
+    Assert.Null(role.ParentRoleId);
+    _roleRepo.Verify(r => r.UpdateAsync(It.IsAny<Role>(), default), Times.Never);
+  }
+
+  [Fact]
+  public async Task AssignParentAsync_IndirectCycleIsRejectedAndParentPreserved()
+  {
+    var viewer = Role.Create("viewer");
+    var editor = Role.Create("editor");
+    var admin = Role.Create("admin");
+    editor.SetParent(viewer);
+    admin.SetParent(editor);
+    _roleRepo.Setup(r => r.GetByIdAsync(viewer.Id, default)).ReturnsAsync(viewer);
+    _roleRepo.Setup(r => r.GetByIdAsync(admin.Id, default)).ReturnsAsync(admin);
+    _roleRepo.Setup(r => r.GetInheritanceChainAsync(admin.Id, default))
+        .ReturnsAsync([admin, editor, viewer]);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        _service.AssignParentAsync(viewer.Id, admin.Id));
+    Assert.Null(viewer.ParentRoleId);
+    Assert.Equal(viewer.Id, editor.ParentRoleId);
+    _roleRepo.Verify(r => r.UpdateAsync(It.IsAny<Role>(), default), Times.Never);
+  }
+
+  [Fact]
+  public async Task AssignParentAsync_ExistingHierarchyCycleIsRejectedWithoutUpdate()
+  {
+    var viewer = Role.Create("viewer");
+    var editor = Role.Create("editor");
+    _roleRepo.Setup(r => r.GetByIdAsync(viewer.Id, default)).ReturnsAsync(viewer);
+    _roleRepo.Setup(r => r.GetByIdAsync(editor.Id, default)).ReturnsAsync(editor);
+    _roleRepo.Setup(r => r.GetInheritanceChainAsync(editor.Id, default))
+        .ThrowsAsync(new InvalidOperationException("Role hierarchy contains a cycle."));
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        _service.AssignParentAsync(viewer.Id, editor.Id));
+    Assert.Null(viewer.ParentRoleId);
+    _roleRepo.Verify(r => r.UpdateAsync(It.IsAny<Role>(), default), Times.Never);
   }
 }

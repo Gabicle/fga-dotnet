@@ -83,12 +83,17 @@ Step 2: Indirect expansion - does report:42#viewer@{something}#{relation} exist?
         Recursively: can user:7 have relation "member" on role:editor?
         → Direct tuple role:editor#member@user:7? YES → allowed
 
-Step 3: Role inheritance - if checking a role object, walk parent chain
-        role:editor parent is role:viewer
-        Recursively check against parent role
+Step 3: Role membership inheritance - if checking role:viewer#member,
+        inspect descendant roles. An editor member is also a viewer member
+        when editor's parent is viewer; the reverse does not apply.
 ```
 
-A `HashSet<string>` tracks visited states to prevent infinite loops from circular role definitions.
+A `HashSet<string>` tracks visited expansion states. Implicit role inheritance is
+limited to `member`; malformed cyclic role graphs and graphs exceeding 1,024
+roles deny implicit inheritance for that check. Tuple expansion stops after
+4,096 states or 128 recursive steps. Direct resource tuples are checked before
+inheritance. Repository failures propagate as errors; callers must treat an
+unavailable or failed check as denied access, never as an allow decision.
 
 **Layer 2 - ABAC policy evaluation**
 
@@ -304,9 +309,19 @@ check: report:42#viewer@user:7 → allowed (via role expansion)
 -- editor's parent role is viewer (set via Role.SetParent)
 -- admin's parent role is editor
 
+grant: report:42#viewer@role:viewer#member
 grant: role:admin#member@user:7
 check: report:42#viewer@user:7 → allowed (via admin → editor → viewer inheritance)
+-- A viewer member does not inherit editor or admin permissions.
 ```
+
+Role creation with a parent and role reparenting take the same PostgreSQL
+transaction-scoped advisory lock before validating the hierarchy. Validation
+and persistence run in one `READ COMMITTED` transaction, so a writer that waited
+for the lock sees the preceding writer's committed hierarchy. Failed or canceled
+transactions release the lock. This guarantee covers service writers that use
+this locking protocol; direct database writes and other writers that skip it can
+still create invalid role graphs.
 
 ### Time-bounded access
 

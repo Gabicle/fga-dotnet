@@ -28,6 +28,7 @@ public sealed class DatabaseFixture : IAsyncLifetime
     services.AddScoped<IRoleRepository, RoleRepository>();
     services.AddScoped<PermissionCheckEngine>();
     services.AddScoped<PermissionService>();
+    services.AddScoped<RoleService>();
     services.AddScoped<AbacEvaluator>();
 
     services.AddSingleton<IAbacPolicy>(new RegionMatchPolicy("report", "viewer"));
