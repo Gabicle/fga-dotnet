@@ -36,8 +36,6 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore
-        env:
-          NUGET_GITHUB_TOKEN: ${{ secrets.NUGET_GITHUB_TOKEN }}
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
