@@ -169,6 +169,62 @@ INDEX ix_relation_tuples_expires_at
 
 ## Running locally
 
+### Docker Compose (API and PostgreSQL)
+
+**Prerequisites:** Docker Engine with the Compose plugin and OpenSSL. No host .NET SDK or PostgreSQL installation is needed. Docker must be able to pull the official .NET 10 and PostgreSQL 16 images and restore packages from NuGet.org.
+
+From the repository root, create a private local environment file and replace its placeholders:
+
+```bash
+cp .env.example .env
+openssl rand -base64 32  # put this output in PERMISSIONS_CHECK_API_KEY
+openssl rand -base64 32  # put a different output in PERMISSIONS_ADMIN_API_KEY
+openssl rand -hex 32     # put this output in POSTGRES_PASSWORD
+```
+
+Keep the generated values in `.env`, which Git and the Docker build context exclude. The two API keys must be different Base64-encoded 32-byte values. `POSTGRES_DB` and `POSTGRES_USER` can use the example values; use a hexadecimal password because it is embedded in a PostgreSQL connection string. Do not commit the populated file.
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs --tail=50 migrate api db
+```
+
+Compose waits for PostgreSQL readiness, then runs the one-shot EF Core migrator. The API starts only after migration succeeds. On later starts, EF Core applies only pending migrations. The API does not migrate the database itself. A failed migration blocks API startup; inspect `docker compose logs migrate` and fix the cause before retrying.
+
+The API listens on port 8080 in its container and is published only at `http://127.0.0.1:8080` on the host. Verify authentication and a denied permission with your local check key:
+
+```bash
+set -a; . ./.env; set +a  # expose the local check key to this shell
+
+curl -i http://127.0.0.1:8080/api/roles
+# Expected: 401 (no API key).
+
+curl -i -H "Authorization: ApiKey ${PERMISSIONS_CHECK_API_KEY}" \
+  http://127.0.0.1:8080/api/roles
+# Expected: 403 (admin endpoint, check-only key).
+
+curl -sS -H "Authorization: ApiKey ${PERMISSIONS_CHECK_API_KEY}" \
+  -H 'Content-Type: application/json' \
+  -d '{"subjectType":"user","subjectId":"compose-demo","relation":"viewer","objectType":"document","objectId":"ungranted"}' \
+  http://127.0.0.1:8080/api/permissions/check
+# Expected: HTTP 200 with "allowed":false.
+```
+
+Use a private shell for these checks because the key is then available to its child processes. For routine operation:
+
+```bash
+docker compose logs -f api migrate db
+docker compose restart api
+docker compose down            # stop and retain the named PostgreSQL volume
+docker compose up -d --build   # existing database data remains
+docker compose down --volumes  # intentionally delete local database data
+```
+
+Attach an independent application container to the Compose network (`docker run --network fga-dotnet_default ...`, or use that network as an external network in its Compose file). It calls `http://api:8080` with its check key as `Authorization: ApiKey <key>`; give it only the check key through its own configuration. A host application uses `http://127.0.0.1:8080` and the same header. The database is reachable inside the Compose network as `db:5432` and has no published host port. The local HTTP endpoint is for development only; deployed traffic requires TLS and appropriate network controls.
+
+### Host .NET SDK setup
+
 **Prerequisites:** .NET SDK 10, Docker, and PostgreSQL 16 (the commands below run PostgreSQL in containers). From a clean checkout, use the official NuGet.org source in `nuget.config`:
 
 ```bash
