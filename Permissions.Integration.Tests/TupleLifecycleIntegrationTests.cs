@@ -18,6 +18,19 @@ public sealed partial class PermissionIntegrationTests
       new("group", "finance", relation, "document", "tuple-lifecycle", subjectRelation, expiresAt);
 
   [Fact]
+  public async Task RejectedFixtureConfigurationLeavesExistingTestDatabaseUntouched()
+  {
+    var target = DisposableTestDatabase.ValidateConfiguredTarget(DbContext.Database.GetConnectionString());
+    var before = await DbContext.RelationTuples.CountAsync();
+    var invalidFixture = new DatabaseFixture(target.ConnectionString, null);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => invalidFixture.InitializeAsync());
+    await Assert.ThrowsAsync<InvalidOperationException>(() => invalidFixture.DisposeAsync());
+
+    Assert.Equal(before, await DbContext.RelationTuples.CountAsync());
+  }
+
+  [Fact]
   public async Task SixFieldIdentitySupportsDirectAndDistinctUsersetsWithExactRevocation()
   {
     await PermissionService.GrantAsync(Grant());
@@ -406,9 +419,10 @@ public sealed partial class PermissionIntegrationTests
   [Fact]
   public async Task MigrationPreservesPopulatedDataAndDowngradeFailsSafelyOnNewIdentity()
   {
-    var source = new NpgsqlConnectionStringBuilder(DbContext.Database.GetConnectionString());
-    Assert.Contains("disposable", source.Database, StringComparison.OrdinalIgnoreCase);
+    var source = DisposableTestDatabase.ValidateConfiguredTarget(DbContext.Database.GetConnectionString());
     var databaseName = "permissions_tuple_migration_disposable_" + Guid.NewGuid().ToString("N");
+    var target = new NpgsqlConnectionStringBuilder(source.ConnectionString) { Database = databaseName };
+    DisposableTestDatabase.ValidateConfiguredTarget(target.ConnectionString);
     var admin = new NpgsqlConnectionStringBuilder(source.ConnectionString) { Database = "postgres" };
     await using (var connection = new NpgsqlConnection(admin.ConnectionString))
     {
@@ -417,11 +431,11 @@ public sealed partial class PermissionIntegrationTests
       await create.ExecuteNonQueryAsync();
     }
 
-    var target = new NpgsqlConnectionStringBuilder(source.ConnectionString) { Database = databaseName };
     var options = new DbContextOptionsBuilder<PermissionsDbContext>().UseNpgsql(target.ConnectionString).Options;
     try
     {
       await using var context = new PermissionsDbContext(options);
+      DisposableTestDatabase.ValidateConfiguredTarget(target.ConnectionString);
       var migrator = context.Database.GetService<IMigrator>();
       await migrator.MigrateAsync("20260413092908_PureZanzibar");
       var id = Guid.NewGuid();
@@ -434,6 +448,7 @@ public sealed partial class PermissionIntegrationTests
             {DateTime.UtcNow}, {expiry})
           """);
 
+      DisposableTestDatabase.ValidateConfiguredTarget(target.ConnectionString);
       await migrator.MigrateAsync();
       var preserved = Assert.Single(await context.RelationTuples.AsNoTracking().ToListAsync());
       Assert.Equal(id, preserved.Id);
@@ -466,6 +481,7 @@ public sealed partial class PermissionIntegrationTests
           VALUES ({Guid.NewGuid()}, 'document', 'old', 'viewer', 'group', 'finance', 'member',
             {DateTime.UtcNow}, NULL)
           """);
+      DisposableTestDatabase.ValidateConfiguredTarget(target.ConnectionString);
       await Assert.ThrowsAnyAsync<Exception>(() => migrator.MigrateAsync("20260413092908_PureZanzibar"));
       Assert.Equal(2, await context.RelationTuples.CountAsync());
       Assert.Equal(expiry, (await context.RelationTuples.AsNoTracking()
@@ -482,6 +498,7 @@ public sealed partial class PermissionIntegrationTests
     }
     finally
     {
+      DisposableTestDatabase.ValidateConfiguredTarget(target.ConnectionString);
       await using var context = new PermissionsDbContext(options);
       await context.Database.EnsureDeletedAsync();
     }

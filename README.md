@@ -169,19 +169,29 @@ INDEX ix_relation_tuples_expires_at
 
 ## Running locally
 
-**Prerequisites:** .NET 10, Docker
+**Prerequisites:** .NET SDK 10, Docker, and PostgreSQL 16 (the commands below run PostgreSQL in containers). From a clean checkout, use the official NuGet.org source in `nuget.config`:
+
+```bash
+dotnet restore Permissions.slnx --force
+dotnet build Permissions.slnx --configuration Release --no-restore
+dotnet tool install --global dotnet-ef --version 10.0.5
+```
+
+Make sure your global .NET tools directory (`~/.dotnet/tools`) is on `PATH` before running `dotnet ef`. If `dotnet-ef` is already installed, update it to the same version instead of installing it again.
 
 ```bash
 # Use two distinct, randomly generated 256-bit service credentials.
 export Permissions__ApiKeys__Check="$(openssl rand -base64 32)"
 export Permissions__ApiKeys__Admin="$(openssl rand -base64 32)"
 
-# Start PostgreSQL
+# Start the application database. The host port matches appsettings.json.
 docker run --name permissions-db \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_DB=permissions \
-  -p 5432:5432 -d postgres:16
+  -p 5437:5432 -d postgres:16
+
+docker exec permissions-db pg_isready -U postgres -d permissions
 
 # Apply migrations
 dotnet ef database update \
@@ -189,12 +199,38 @@ dotnet ef database update \
   --startup-project Permissions.Api
 
 # Run the API
-dotnet run --project Permissions.Api
+dotnet run --project Permissions.Api --launch-profile http
 ```
 
 API available at `http://localhost:5031`. OpenAPI schema at `http://localhost:5031/openapi/v1.json`.
 
 The API refuses to start unless both API keys are configured as distinct Base64-encoded 32-byte values; it also rejects all-identical-byte keys. Key strength cannot be proven from supplied bytes. Generate each key independently with a cryptographically secure random generator, such as the `openssl rand` commands above. Supply keys through environment variables or a secure configuration provider; do not put deployed keys in appsettings files or source control. Use HTTPS for network traffic. Rotate a key by changing its server configuration and restarting the API, then update the corresponding client. The development OpenAPI endpoint also requires a valid service key.
+
+The committed connection string is a local development default only. For a different database, set `ConnectionStrings__DefaultConnection` in the API environment; keep deployed database credentials outside source control.
+
+### Run the tests from a clean checkout
+
+The PostgreSQL suite **migrates and deletes its target database**. Use a separate PostgreSQL 16 container and a database named `permissions_integration_disposable` (or a name matching the documented disposable convention), never the application database. The test-only authorization setting must be the exact value below. The fixture rejects missing or non-disposable targets before connecting or cleaning up.
+
+```bash
+docker run --name permissions-test-db \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_DB=permissions_integration_disposable \
+  -p 5438:5432 -d postgres:16
+docker exec permissions-test-db pg_isready -U postgres -d permissions_integration_disposable
+
+export INTEGRATION_TEST_CONNECTION_STRING="Host=localhost;Port=5438;Database=permissions_integration_disposable;Username=postgres;Password=postgres"
+export PERMISSIONS_TEST_ALLOW_DESTRUCTIVE_DATABASE=disposable-tests-only
+
+dotnet test Permissions.Domain.Tests/Permissions.Domain.Tests.csproj --no-build --configuration Release
+dotnet test Permissions.Application.Tests/Permissions.Application.Tests.csproj --no-build --configuration Release
+dotnet test Permissions.Api.Tests/Permissions.Api.Tests.csproj --no-build --configuration Release
+dotnet test Permissions.Integration.Tests/Permissions.Integration.Tests.csproj --no-build --configuration Release
+dotnet list Permissions.slnx package --vulnerable --include-transitive
+```
+
+The fixture accepts only explicit targets named `permissions_integration_disposable` or `permissions_integration_disposable_<lowercase letters or digits>`; the migration test creates similarly protected `permissions_tuple_migration_disposable_<id>` databases. It rejects `postgres`, `template0`, `template1`, malformed connection strings, and missing authorization. The application database and the integration-test database must remain separate.
 
 ### Service authentication
 
@@ -331,11 +367,13 @@ Content-Type: application/json
 
 ## Modelling permissions
 
+The `report:42#viewer` checks below include this trusted ABAC context in every check request: `subjectAttributes: { subjectType: "user", subjectId: "7", region: "us-east", clearanceLevel: 3 }` and `resourceAttributes: { resourceType: "report", resourceId: "42", region: "us-east", sensitivityLevel: 2 }`. The tuple grants alone are insufficient for a report check; omitting these attributes returns HTTP 400.
+
 ### Direct access
 
 ```
 grant: report:42#viewer@user:7
-check: report:42#viewer@user:7 → allowed (direct match)
+check: report:42#viewer@user:7 with the ABAC context above → allowed (direct match)
 ```
 
 ### Role-based access
@@ -343,7 +381,7 @@ check: report:42#viewer@user:7 → allowed (direct match)
 ```
 grant: role:editor#member@user:7
 grant: report:42#viewer@role:editor#member
-check: report:42#viewer@user:7 → allowed (via role expansion)
+check: report:42#viewer@user:7 with the ABAC context above → allowed (via role expansion)
 ```
 
 ### Role inheritance
@@ -354,7 +392,7 @@ check: report:42#viewer@user:7 → allowed (via role expansion)
 
 grant: report:42#viewer@role:viewer#member
 grant: role:admin#member@user:7
-check: report:42#viewer@user:7 → allowed (via admin → editor → viewer inheritance)
+check: report:42#viewer@user:7 with the ABAC context above → allowed (via admin → editor → viewer inheritance)
 -- A viewer member does not inherit editor or admin permissions.
 ```
 
@@ -370,7 +408,7 @@ still create invalid role graphs.
 
 ```
 grant: report:42#viewer@user:7 with expiresAt: "2026-12-31T23:59:59Z"
-check after expiry: report:42#viewer@user:7 → denied (tuple expired)
+check after expiry: report:42#viewer@user:7 with the ABAC context above → denied (tuple expired)
 ```
 
 ### Group membership

@@ -25,6 +25,7 @@ public abstract class IntegrationTestBase : IClassFixture<DatabaseFixture>, IAsy
   public async Task DisposeAsync()
   {
     // Clean all tuples and roles between tests
+    DisposableTestDatabase.ValidateConfiguredTarget(DbContext.Database.GetConnectionString());
     await DbContext.RelationTuples.ExecuteDeleteAsync();
     await DbContext.Roles.ExecuteDeleteAsync();
     Scope.Dispose();

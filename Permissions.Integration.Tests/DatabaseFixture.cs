@@ -11,18 +11,31 @@ namespace Permissions.Integration.Tests;
 
 public sealed class DatabaseFixture : IAsyncLifetime
 {
-  private static string ConnectionString =>
-    Environment.GetEnvironmentVariable("INTEGRATION_TEST_CONNECTION_STRING")
-    ?? "Host=localhost;Port=5437;Database=permissions_integration_test;Username=postgres;Password=postgres";
+  private readonly string? _connectionString;
+  private readonly string? _destructiveAuthorization;
+
+  public DatabaseFixture() : this(
+      Environment.GetEnvironmentVariable(DisposableTestDatabase.ConnectionStringVariable),
+      Environment.GetEnvironmentVariable(DisposableTestDatabase.AuthorizationVariable)) { }
+
+  internal DatabaseFixture(string? connectionString, string? destructiveAuthorization)
+  {
+    _connectionString = connectionString;
+    _destructiveAuthorization = destructiveAuthorization;
+  }
+
+  private string SafeConnectionString => DisposableTestDatabase.Validate(
+      _connectionString, _destructiveAuthorization).ConnectionString;
 
   public IServiceProvider Services { get; private set; } = null!;
 
   public async Task InitializeAsync()
   {
+    var connectionString = SafeConnectionString;
     var services = new ServiceCollection();
 
     services.AddDbContext<PermissionsDbContext>(options =>
-        options.UseNpgsql(ConnectionString));
+        options.UseNpgsql(connectionString));
 
     services.AddScoped<IRelationTupleRepository, RelationTupleRepository>();
     services.AddScoped<IRoleRepository, RoleRepository>();
@@ -51,7 +64,10 @@ public sealed class DatabaseFixture : IAsyncLifetime
 
   public async Task DisposeAsync()
   {
-    // Drop and recreate the test database between full test runs
+    // Recheck before cleanup even if configuration was invalid at startup.
+    _ = SafeConnectionString;
+    if (Services is null) return;
+    // Drop the dedicated test database between full test runs.
     using var scope = Services.CreateScope();
     var context = scope.ServiceProvider.GetRequiredService<PermissionsDbContext>();
     await context.Database.EnsureDeletedAsync();
