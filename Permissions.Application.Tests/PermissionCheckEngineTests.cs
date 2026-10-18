@@ -32,6 +32,7 @@ public sealed class PermissionCheckEngineTests
 
         Assert.True(result.Allowed);
         Assert.Equal("Allowed via tuple expansion", result.Reason);
+        Assert.Equal(AuthorizationReasonCodes.Allowed, result.ReasonCode);
     }
 
     [Fact]
@@ -51,6 +52,7 @@ public sealed class PermissionCheckEngineTests
 
         Assert.False(result.Allowed);
         Assert.Equal("No matching tuple found", result.Reason);
+        Assert.Equal(AuthorizationReasonCodes.RelationshipDenied, result.ReasonCode);
     }
 
     [Fact]
@@ -135,16 +137,27 @@ public sealed class PermissionCheckEngineTests
             .Setup(r => r.GetByObjectAndRelationAsync("role", "viewer", "member", default))
             .ReturnsAsync([]);
 
-        // role:viewer has editor as a child — but we walk UP via parent
-        // viewer role has no parent
+        // A member of editor inherits membership in viewer.
         _roleRepo
             .Setup(r => r.GetByNameAsync("VIEWER", default))
             .ReturnsAsync(viewerRole);
+        _roleRepo
+            .Setup(r => r.GetChildrenByParentIdAsync(viewerRole.Id, default))
+            .ReturnsAsync([editorRole]);
+        _roleRepo
+            .Setup(r => r.GetChildrenByParentIdAsync(editorRole.Id, default))
+            .ReturnsAsync([]);
+        _tupleRepo
+            .Setup(r => r.ExistsAsync(
+                It.Is<TupleKey>(k => k.ObjectType == "role" &&
+                    k.ObjectId == "editor" && k.Relation == "member" &&
+                    k.SubjectType == "user" && k.SubjectId == "7"), default))
+            .ReturnsAsync(true);
 
         var result = await _engine.CheckAsync(new CheckPermissionRequest(
             "user", "7", "viewer", "report", "42"));
 
-        Assert.False(result.Allowed);
+        Assert.True(result.Allowed);
     }
 
     [Fact]
@@ -164,5 +177,16 @@ public sealed class PermissionCheckEngineTests
             "user", "7", "viewer", "report", "42"));
 
         Assert.False(result.Allowed);
+    }
+
+    [Fact]
+    public async Task Check_RepositoryFailureDoesNotReturnAllowDecision()
+    {
+        _tupleRepo.Setup(r => r.ExistsAsync(It.IsAny<TupleKey>(), default))
+            .ThrowsAsync(new InvalidOperationException("Database unavailable"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _engine.CheckAsync(new CheckPermissionRequest(
+                "user", "7", "viewer", "report", "42")));
     }
 }

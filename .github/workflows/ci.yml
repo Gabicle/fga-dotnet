@@ -16,7 +16,7 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_USER: postgres
-          POSTGRES_DB: permissions_integration_test
+          POSTGRES_DB: permissions_integration_disposable
         ports:
           - 5432:5432
         options: >-
@@ -34,15 +34,34 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
       - name: Restore dependencies
-        run: dotnet restore
-        env:
-          NUGET_GITHUB_TOKEN: ${{ secrets.NUGET_GITHUB_TOKEN }}
+        run: dotnet restore Permissions.slnx --force -p:NuGetAuditMode=all -warnaserror:NU1901,NU1902,NU1903,NU1904
 
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run tests
+      - name: Check transitive dependency vulnerabilities
+        run: dotnet list Permissions.slnx package --vulnerable --include-transitive
+
+      - name: Domain tests
+        run: dotnet test Permissions.Domain.Tests/Permissions.Domain.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Application tests
+        run: dotnet test Permissions.Application.Tests/Permissions.Application.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: API HTTP tests
+        run: dotnet test Permissions.Api.Tests/Permissions.Api.Tests.csproj --no-build --configuration Release --verbosity normal
+
+      - name: Python authorization contract tests
+        run: python -m unittest discover -s python_contract/tests -v
+
+      - name: PostgreSQL integration tests
         env:
-          INTEGRATION_TEST_CONNECTION_STRING: "Host=localhost;Port=5432;Database=permissions_integration_test;Username=postgres;Password=postgres"
-        run: dotnet test --no-build --configuration Release --verbosity normal
+          INTEGRATION_TEST_CONNECTION_STRING: "Host=localhost;Port=5432;Database=permissions_integration_disposable;Username=postgres;Password=postgres"
+          PERMISSIONS_TEST_ALLOW_DESTRUCTIVE_DATABASE: disposable-tests-only
+        run: dotnet test Permissions.Integration.Tests/Permissions.Integration.Tests.csproj --no-build --configuration Release --verbosity normal

@@ -51,9 +51,10 @@ public sealed class RelationTupleConfiguration : IEntityTypeConfiguration<Relati
         builder.Property(x => x.ExpiresAt)
             .HasColumnName("expires_at");
 
-        builder.HasIndex(x => new { x.ObjectType, x.ObjectId, x.Relation, x.SubjectType, x.SubjectId })
+        builder.HasIndex(x => new { x.ObjectType, x.ObjectId, x.Relation, x.SubjectType, x.SubjectId, x.SubjectRelation })
             .IsUnique()
-            .HasDatabaseName("ix_relation_tuples_lookup");
+            .AreNullsDistinct(false)
+            .HasDatabaseName("ix_relation_tuples_identity");
 
         builder.HasIndex(x => new { x.SubjectType, x.SubjectId })
             .HasDatabaseName("ix_relation_tuples_subject");

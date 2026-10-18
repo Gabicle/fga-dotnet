@@ -9,12 +9,14 @@ public abstract class IntegrationTestBase : IClassFixture<DatabaseFixture>, IAsy
 {
   protected readonly IServiceScope Scope;
   protected readonly PermissionService PermissionService;
+  protected readonly RoleService RoleService;
   protected readonly PermissionsDbContext DbContext;
 
   protected IntegrationTestBase(DatabaseFixture fixture)
   {
     Scope = fixture.Services.CreateScope();
     PermissionService = Scope.ServiceProvider.GetRequiredService<PermissionService>();
+    RoleService = Scope.ServiceProvider.GetRequiredService<RoleService>();
     DbContext = Scope.ServiceProvider.GetRequiredService<PermissionsDbContext>();
   }
 
@@ -23,6 +25,7 @@ public abstract class IntegrationTestBase : IClassFixture<DatabaseFixture>, IAsy
   public async Task DisposeAsync()
   {
     // Clean all tuples and roles between tests
+    DisposableTestDatabase.ValidateConfiguredTarget(DbContext.Database.GetConnectionString());
     await DbContext.RelationTuples.ExecuteDeleteAsync();
     await DbContext.Roles.ExecuteDeleteAsync();
     Scope.Dispose();

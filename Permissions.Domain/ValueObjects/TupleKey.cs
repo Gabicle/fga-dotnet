@@ -22,6 +22,8 @@ public sealed record TupleKey
     ArgumentException.ThrowIfNullOrWhiteSpace(relation);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectType);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+    if (subjectRelation is not null)
+      ArgumentException.ThrowIfNullOrWhiteSpace(subjectRelation);
 
     ObjectType = objectType;
     ObjectId = objectId;

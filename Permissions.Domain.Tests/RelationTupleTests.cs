@@ -47,4 +47,36 @@ public sealed class RelationTupleTests
 
     Assert.Equal("report:42#viewer@group:finance#member", tuple.ToString());
   }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("  ")]
+  public void Create_BlankSubjectRelation_IsRejected(string subjectRelation) =>
+      Assert.Throws<ArgumentException>(() => RelationTuple.Create(
+          "report", "42", "viewer", "group", "finance", subjectRelation));
+
+  [Fact]
+  public void Create_RequiresFutureUtcExpiration()
+  {
+    Assert.Throws<ArgumentException>(() => RelationTuple.Create(
+        "report", "42", "viewer", "user", "7", expiresAt: DateTime.Now.AddDays(1)));
+    Assert.Throws<ArgumentException>(() => RelationTuple.Create(
+        "report", "42", "viewer", "user", "7", expiresAt: DateTime.SpecifyKind(DateTime.UtcNow.AddDays(1), DateTimeKind.Unspecified)));
+    Assert.Throws<ArgumentException>(() => RelationTuple.Create(
+        "report", "42", "viewer", "user", "7", expiresAt: DateTime.UtcNow.AddSeconds(-1)));
+    Assert.NotNull(RelationTuple.Create(
+        "report", "42", "viewer", "user", "7", expiresAt: DateTime.UtcNow.AddDays(1)).ExpiresAt);
+    Assert.Null(RelationTuple.Create("report", "42", "viewer", "user", "7").ExpiresAt);
+  }
+
+  [Fact]
+  public void Create_NormalizesExpirationToPostgreSqlMicroseconds()
+  {
+    var requested = DateTime.UtcNow.AddDays(1).AddTicks(7);
+    var tuple = RelationTuple.Create("document", "42", "viewer", "user", "7",
+        expiresAt: requested);
+    Assert.Equal(0, tuple.ExpiresAt!.Value.Ticks % 10);
+    Assert.True(tuple.ExpiresAt <= requested);
+    Assert.True(tuple.ExpiresAt > requested.AddTicks(-10));
+  }
 }

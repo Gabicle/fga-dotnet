@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Permissions.Api.Security;
 using Permissions.Application.DTOs;
 using Permissions.Application.Services;
 
@@ -6,6 +8,7 @@ namespace Permissions.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = ApiKeyPolicies.Admin)]
 public sealed class RolesController : ControllerBase
 {
   private readonly RoleService _roleService;
@@ -18,6 +21,7 @@ public sealed class RolesController : ControllerBase
   [HttpPost]
   [ProducesResponseType(typeof(RoleResponse), StatusCodes.Status201Created)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status404NotFound)]
   [ProducesResponseType(StatusCodes.Status409Conflict)]
   public async Task<IActionResult> Create(
       [FromBody] CreateRoleRequest request,
@@ -28,9 +32,22 @@ public sealed class RolesController : ControllerBase
       var role = await _roleService.CreateAsync(request, cancellationToken);
       return CreatedAtAction(nameof(GetById), new { id = role.Id }, role);
     }
-    catch (InvalidOperationException ex)
+    catch (RoleNotFoundException)
     {
-      return Conflict(new { error = ex.Message });
+      return NotFound(new { error = "Role not found." });
+    }
+    catch (RoleConflictException)
+    {
+      return Conflict(new { error = "Role conflict." });
+    }
+    catch (ArgumentException)
+    {
+      return BadRequest(new { error = "Invalid role request." });
+    }
+    catch (InvalidOperationException)
+    {
+      return StatusCode(StatusCodes.Status500InternalServerError,
+          new { error = "Role operation failed." });
     }
   }
 
@@ -57,6 +74,7 @@ public sealed class RolesController : ControllerBase
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
   [ProducesResponseType(StatusCodes.Status404NotFound)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
   public async Task<IActionResult> AssignParent(
       Guid id,
       [FromBody] AssignParentRequest request,
@@ -67,9 +85,18 @@ public sealed class RolesController : ControllerBase
       await _roleService.AssignParentAsync(id, request.ParentRoleId, cancellationToken);
       return NoContent();
     }
-    catch (InvalidOperationException ex)
+    catch (RoleNotFoundException)
     {
-      return NotFound(new { error = ex.Message });
+      return NotFound(new { error = "Role not found." });
+    }
+    catch (RoleConflictException)
+    {
+      return Conflict(new { error = "Role conflict." });
+    }
+    catch (InvalidOperationException)
+    {
+      return StatusCode(StatusCodes.Status500InternalServerError,
+          new { error = "Role operation failed." });
     }
   }
 }

@@ -1,4 +1,5 @@
 using Permissions.Application.DTOs;
+using Permissions.Domain.Entities;
 using Permissions.Domain.Repositories;
 using Permissions.Domain.ValueObjects;
 
@@ -6,6 +7,9 @@ namespace Permissions.Application.Services;
 
 public sealed class PermissionCheckEngine
 {
+  private const int MaxExpansionStates = 4096;
+  private const int MaxExpansionDepth = 128;
+  private const int MaxRoleDescendants = 1024;
   private readonly IRelationTupleRepository _tupleRepository;
   private readonly IRoleRepository _roleRepository;
 
@@ -32,8 +36,8 @@ public sealed class PermissionCheckEngine
         cancellationToken);
 
     return allowed
-        ? new CheckPermissionResponse(true, "Allowed via tuple expansion")
-        : new CheckPermissionResponse(false, "No matching tuple found");
+        ? new CheckPermissionResponse(true, "Allowed via tuple expansion", AuthorizationReasonCodes.Allowed)
+        : new CheckPermissionResponse(false, "No matching tuple found", AuthorizationReasonCodes.RelationshipDenied);
   }
 
   private async Task<bool> ExpandAsync(
@@ -43,11 +47,16 @@ public sealed class PermissionCheckEngine
       string subjectType,
       string subjectId,
       HashSet<string> visited,
-      CancellationToken cancellationToken)
+      CancellationToken cancellationToken,
+      bool includeInheritance = true,
+      int depth = 0)
   {
-    // Guard against infinite loops in circular role definitions
-    var key = $"{objectType}:{objectId}#{relation}@{subjectType}:{subjectId}";
+    if (depth > MaxExpansionDepth) return false;
+    // The mode is part of the state: an explicit userset can still request inheritance
+    // after the same role was checked as a descendant without inheritance.
+    var key = $"{objectType}:{objectId}#{relation}@{subjectType}:{subjectId}:{includeInheritance}";
     if (!visited.Add(key)) return false;
+    if (visited.Count > MaxExpansionStates) return false;
 
     // Step 1: direct tuple match
     var directKey = new TupleKey(objectType, objectId, relation, subjectType, subjectId);
@@ -71,40 +80,61 @@ public sealed class PermissionCheckEngine
           subjectType,
           subjectId,
           visited,
-          cancellationToken);
+          cancellationToken,
+          depth: depth + 1);
 
       if (isRoleMember) return true;
     }
 
-    // Step 3: walk role inheritance chain
-    // if role:editor#member@user:7 and editor's parent is viewer
-    // then user:7 inherits viewer permissions
-    if (objectType == "role")
+    // A child role inherits its parent's member relation. Validate the complete
+    // descendant graph before accepting an inherited match: malformed cycles or
+    // oversized graphs fail closed for implicit inheritance only.
+    if (includeInheritance && objectType == "role" && relation == "member")
     {
       var role = await _roleRepository.GetByNameAsync(
           objectId.ToUpperInvariant(), cancellationToken);
-
-      if (role?.ParentRoleId is not null)
+      if (role is not null)
       {
-        var parentRole = await _roleRepository.GetByIdAsync(
-            role.ParentRoleId.Value, cancellationToken);
-
-        if (parentRole is not null)
+        var descendants = await GetValidDescendantsAsync(role, cancellationToken);
+        if (descendants is not null)
         {
-          var inheritedAccess = await ExpandAsync(
-              objectType,
-              parentRole.Name,
-              relation,
-              subjectType,
-              subjectId,
-              visited,
-              cancellationToken);
-
-          if (inheritedAccess) return true;
+          foreach (var descendant in descendants)
+          {
+            if (await ExpandAsync("role", descendant.Name, "member", subjectType,
+                subjectId, visited, cancellationToken, includeInheritance: false,
+                depth: depth + 1))
+              return true;
+          }
         }
       }
     }
 
     return false;
+  }
+
+  private async Task<IReadOnlyList<Role>?> GetValidDescendantsAsync(
+      Role root, CancellationToken cancellationToken)
+  {
+    var seen = new HashSet<Guid> { root.Id };
+    var queue = new Queue<Role>();
+    var descendants = new List<Role>();
+    queue.Enqueue(root);
+
+    while (queue.Count > 0)
+    {
+      var parent = queue.Dequeue();
+      var children = await _roleRepository.GetChildrenByParentIdAsync(parent.Id, cancellationToken);
+      foreach (var child in children)
+      {
+        if (child.ParentRoleId != parent.Id || !seen.Add(child.Id) ||
+            seen.Count > MaxRoleDescendants)
+          return null;
+
+        descendants.Add(child);
+        queue.Enqueue(child);
+      }
+    }
+
+    return descendants;
   }
 }

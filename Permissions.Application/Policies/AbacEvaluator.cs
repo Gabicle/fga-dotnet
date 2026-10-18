@@ -12,17 +12,21 @@ public sealed class AbacEvaluator
   }
 
   public AbacEvaluationResult Evaluate(
+      string objectType,
       string relation,
       SubjectAttributes subject,
       ResourceAttributes resource,
-      EnvironmentAttributes environment)
+      EnvironmentAttributes environment,
+      AbacRequirements.Requirement? requirement = null)
   {
     var applicablePolicies = _policies
-        .Where(p => p.ResourceType == resource.ResourceType &&
+        .Where(p => p.ResourceType == objectType &&
                     p.Relation == relation)
         .ToList();
 
-    if (applicablePolicies.Count == 0)
+    if (applicablePolicies.Count == 0 ||
+        (requirement is not null && requirement.PolicyTypes.Any(type =>
+            !applicablePolicies.Any(policy => policy.GetType() == type))))
       return AbacEvaluationResult.NotApplicable();
 
     foreach (var policy in applicablePolicies)
@@ -33,4 +37,7 @@ public sealed class AbacEvaluator
 
     return AbacEvaluationResult.Allowed();
   }
+
+  public void ValidateRequiredPolicies() =>
+      AbacRequirements.ValidateRegisteredPolicies(_policies);
 }

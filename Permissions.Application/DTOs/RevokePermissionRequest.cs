@@ -5,4 +5,5 @@ public sealed record RevokePermissionRequest(
     string SubjectId,
     string Relation,
     string ObjectType,
-    string ObjectId);
+    string ObjectId,
+    string? SubjectRelation = null);

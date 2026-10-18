@@ -7,7 +7,7 @@ public sealed record AbacEvaluationResult
   public string? DeniedByPolicy { get; init; }
 
   public static AbacEvaluationResult NotApplicable() =>
-      new() { IsApplicable = false, IsAllowed = true };
+      new() { IsApplicable = false, IsAllowed = false };
 
   public static AbacEvaluationResult Allowed() =>
       new() { IsApplicable = true, IsAllowed = true };
