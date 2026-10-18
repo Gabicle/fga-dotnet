@@ -112,17 +112,6 @@ public sealed class PermissionService
     GrantPermissionRequest request,
     CancellationToken cancellationToken = default)
   {
-    var key = new TupleKey(
-        request.ObjectType,
-        request.ObjectId,
-        request.Relation,
-        request.SubjectType,
-        request.SubjectId,
-        request.SubjectRelation);
-
-    var exists = await _tupleRepository.ExistsAsync(key, cancellationToken);
-    if (exists) return;
-
     var tuple = RelationTuple.Create(
         request.ObjectType,
         request.ObjectId,
@@ -132,7 +121,18 @@ public sealed class PermissionService
         request.SubjectRelation,
         request.ExpiresAt);
 
-    await _tupleRepository.AddAsync(tuple, cancellationToken);
+    var outcome = await _tupleRepository.GrantAsync(tuple, cancellationToken);
+    switch (outcome)
+    {
+      case TupleGrantOutcome.Success:
+        return;
+      case TupleGrantOutcome.ActiveExpirationConflict:
+        throw new TupleGrantConflictException();
+      case TupleGrantOutcome.ExpirationElapsed:
+        throw new ArgumentException("ExpiresAt must be a future UTC timestamp.", nameof(request));
+      default:
+        throw new InvalidOperationException("Unexpected tuple grant result.");
+    }
   }
 
   public async Task RevokeAsync(

@@ -9,7 +9,7 @@ using Permissions.Infrastructure.Repositories;
 
 namespace Permissions.Integration.Tests;
 
-public sealed class PermissionIntegrationTests : IntegrationTestBase
+public sealed partial class PermissionIntegrationTests : IntegrationTestBase
 {
   private readonly IServiceProvider _services;
 

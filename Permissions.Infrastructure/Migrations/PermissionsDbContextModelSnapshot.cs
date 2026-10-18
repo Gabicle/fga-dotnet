@@ -80,9 +80,11 @@ namespace Permissions.Infrastructure.Migrations
                     b.HasIndex("SubjectType", "SubjectId")
                         .HasDatabaseName("ix_relation_tuples_subject");
 
-                    b.HasIndex("ObjectType", "ObjectId", "Relation", "SubjectType", "SubjectId")
+                    b.HasIndex("ObjectType", "ObjectId", "Relation", "SubjectType", "SubjectId", "SubjectRelation")
                         .IsUnique()
-                        .HasDatabaseName("ix_relation_tuples_lookup");
+                        .HasDatabaseName("ix_relation_tuples_identity");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ObjectType", "ObjectId", "Relation", "SubjectType", "SubjectId", "SubjectRelation"), false);
 
                     b.ToTable("relation_tuples", (string)null);
                 });

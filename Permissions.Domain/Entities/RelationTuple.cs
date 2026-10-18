@@ -28,9 +28,12 @@ public sealed class RelationTuple
     ArgumentException.ThrowIfNullOrWhiteSpace(relation);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectType);
     ArgumentException.ThrowIfNullOrWhiteSpace(subjectId);
+    if (subjectRelation is not null)
+      ArgumentException.ThrowIfNullOrWhiteSpace(subjectRelation);
 
-    if (expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow.AddSeconds(-1))
-      throw new InvalidOperationException("ExpiresAt must be a future date.");
+    if (expiresAt.HasValue &&
+        (expiresAt.Value.Kind != DateTimeKind.Utc || expiresAt.Value <= DateTime.UtcNow))
+      throw new ArgumentException("ExpiresAt must be a future UTC timestamp.", nameof(expiresAt));
 
     return new RelationTuple
     {
@@ -42,7 +45,8 @@ public sealed class RelationTuple
       SubjectId = subjectId,
       SubjectRelation = subjectRelation,
       CreatedAt = DateTime.UtcNow,
-      ExpiresAt = expiresAt
+      // PostgreSQL timestamps have microsecond precision; normalize before conflict comparison.
+      ExpiresAt = expiresAt?.AddTicks(-(expiresAt.Value.Ticks % 10))
     };
   }
 

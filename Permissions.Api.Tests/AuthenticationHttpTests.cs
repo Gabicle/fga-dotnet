@@ -22,6 +22,51 @@ namespace Permissions.Api.Tests;
 
 public sealed class AuthenticationHttpTests
 {
+  [Fact]
+  public async Task AdminGrantClassifiesIdempotenceConflictAndInvalidExpiration()
+  {
+    using var factory = new AuthApiFactory();
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.AdminKey);
+    var expiry = DateTime.UtcNow.AddDays(1);
+    var body = new GrantPermissionRequest("user", "alice", "viewer", "document", "one", ExpiresAt: expiry);
+
+    Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/permissions/grant", body)).StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/permissions/grant", body)).StatusCode);
+    Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/permissions/grant",
+        body with { ExpiresAt = expiry.AddHours(1) })).StatusCode);
+    Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync("/api/permissions/grant",
+        body with { ExpiresAt = null })).StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/permissions/grant",
+        body with { ExpiresAt = DateTime.UtcNow.AddDays(-1) })).StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/permissions/grant",
+        new { subjectType = "user", subjectId = "alice", relation = "viewer",
+          objectType = "document", objectId = "one", expiresAt = "2030-01-01T00:00:00" })).StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/permissions/grant",
+        body with { SubjectRelation = " " })).StatusCode);
+    Assert.Equal(expiry.AddTicks(-(expiry.Ticks % 10)), Assert.Single(factory.Tuples).ExpiresAt);
+  }
+
+  [Fact]
+  public async Task AdminRevokeUsesSubjectRelationAndRejectsBlankRelation()
+  {
+    using var factory = new AuthApiFactory();
+    factory.Tuples.Add(RelationTuple.Create("document", "one", "viewer", "group", "finance"));
+    factory.Tuples.Add(RelationTuple.Create("document", "one", "viewer", "group", "finance", "member"));
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.AdminKey);
+    var direct = new RevokePermissionRequest("group", "finance", "viewer", "document", "one");
+
+    Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/permissions/revoke", direct)).StatusCode);
+    Assert.Equal("member", Assert.Single(factory.Tuples).SubjectRelation);
+    Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/permissions/revoke", direct)).StatusCode);
+    Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/permissions/revoke",
+        direct with { SubjectRelation = " " })).StatusCode);
+    Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsJsonAsync("/api/permissions/revoke",
+        direct with { SubjectRelation = "member" })).StatusCode);
+    Assert.Empty(factory.Tuples);
+  }
+
   private static readonly object CheckBody = new {
     subjectType = "user", subjectId = "alice", relation = "viewer",
     objectType = "report", objectId = "one",
@@ -518,9 +563,22 @@ public sealed class AuthenticationHttpTests
         tuples.Setup(x => x.GetByObjectAndRelationAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((string type, string id, string relation, CancellationToken _) =>
                 (IReadOnlyList<RelationTuple>)Tuples.Where(t => t.ObjectType == type && t.ObjectId == id && t.Relation == relation && !t.IsExpired()).ToList());
-        tuples.Setup(x => x.AddAsync(It.IsAny<RelationTuple>(), It.IsAny<CancellationToken>()))
-            .Callback((RelationTuple tuple, CancellationToken _) => Tuples.Add(tuple))
-            .Returns(Task.CompletedTask);
+        tuples.Setup(x => x.GrantAsync(It.IsAny<RelationTuple>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RelationTuple tuple, CancellationToken _) =>
+            {
+              var existing = Tuples.FirstOrDefault(t => Matches(t, new TupleKey(
+                  tuple.ObjectType, tuple.ObjectId, tuple.Relation, tuple.SubjectType,
+                  tuple.SubjectId, tuple.SubjectRelation)));
+              if (existing is null || existing.IsExpired())
+              {
+                if (existing is not null) Tuples.Remove(existing);
+                Tuples.Add(tuple);
+                return TupleGrantOutcome.Success;
+              }
+              return existing.ExpiresAt == tuple.ExpiresAt
+                  ? TupleGrantOutcome.Success
+                  : TupleGrantOutcome.ActiveExpirationConflict;
+            });
         tuples.Setup(x => x.DeleteAsync(It.IsAny<TupleKey>(), It.IsAny<CancellationToken>()))
             .Callback((TupleKey key, CancellationToken _) => Tuples.RemoveAll(t => Matches(t, key)))
             .Returns(Task.CompletedTask);

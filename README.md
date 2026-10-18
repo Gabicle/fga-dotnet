@@ -152,8 +152,9 @@ Key indexes:
 
 ```sql
 -- Fast permission lookups
-UNIQUE INDEX ix_relation_tuples_lookup
-  ON relation_tuples (object_type, object_id, relation, subject_type, subject_id)
+UNIQUE INDEX ix_relation_tuples_identity
+  ON relation_tuples (object_type, object_id, relation, subject_type, subject_id, subject_relation)
+  NULLS NOT DISTINCT
 
 -- Subject-based queries ("what can this user access?")
 INDEX ix_relation_tuples_subject
@@ -239,6 +240,10 @@ Content-Type: application/json
 ```
 
 This creates the tuple `report:42#viewer@role:editor#member` - anyone who is a member of the editor role can view report 42.
+
+A tuple's identity consists of the object type and ID, relation, subject type and ID, and optional subject relation. A missing or null `subjectRelation` identifies a direct tuple; a non-null value identifies a separate userset tuple. Blank non-null subject relations are invalid.
+
+Granting a new tuple returns HTTP 204. Repeating an active grant with the same expiration (including two null expirations) also returns 204 without changing its effective creation time. An expired tuple is reactivated with a new effective creation time and the requested expiration. An active tuple with a different requested expiration returns HTTP 409; revoke it first if a change is intended. An invalid, non-UTC, or already expired timestamp returns HTTP 400. Null `expiresAt` means a non-expiring grant. Expiration is normalized to PostgreSQL's microsecond precision and checked against the PostgreSQL clock when the grant is written, including after waiting for another writer. Permission checks continue to ignore expired grants.
 
 ### Check a permission
 
@@ -385,7 +390,9 @@ check: budget:7#editor@user:eve   → denied  (eve is not in finance group)
 
 ### Why POST for revoke instead of DELETE?
 
-The permission tuple is identified by five fields. Embedding all of them in a URL produces fragile, hard-to-read routes. Structured request bodies are consistent across all three operations and match the approach taken by OpenFGA.
+The permission tuple is identified by six fields, including nullable `subjectRelation`. Omitted or null `subjectRelation` revokes only a direct tuple. To revoke a userset tuple, supply its exact `subjectRelation`. Revoking an absent or expired tuple returns HTTP 204; an expired tuple is removed if present. Embedding all fields in a URL produces fragile, hard-to-read routes. Structured request bodies are consistent across all three operations.
+
+The tuple-identity migration creates the new six-column unique index before removing the old five-column index. It preserves existing rows and expiration values. Existing duplicate direct tuples cause the migration to fail safely and must be reviewed before retrying. A downgrade can fail safely if distinct userset tuples created under the new identity collide under the old five-column index; it does not delete or merge grants.
 
 ### Why no Parse() on TupleKey?
 

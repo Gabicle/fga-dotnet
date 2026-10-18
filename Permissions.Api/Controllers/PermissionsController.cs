@@ -41,12 +41,24 @@ public sealed class PermissionsController : ControllerBase
   [Authorize(Policy = ApiKeyPolicies.Admin)]
   [ProducesResponseType(StatusCodes.Status204NoContent)]
   [ProducesResponseType(StatusCodes.Status400BadRequest)]
+  [ProducesResponseType(StatusCodes.Status409Conflict)]
   public async Task<IActionResult> Grant(
       [FromBody] GrantPermissionRequest request,
       CancellationToken cancellationToken)
   {
-    await _permissionService.GrantAsync(request, cancellationToken);
-    return NoContent();
+    try
+    {
+      await _permissionService.GrantAsync(request, cancellationToken);
+      return NoContent();
+    }
+    catch (ArgumentException ex)
+    {
+      return BadRequest(new { error = ex.Message });
+    }
+    catch (TupleGrantConflictException ex)
+    {
+      return Conflict(new { error = ex.Message });
+    }
   }
 
   [HttpPost("revoke")]
@@ -57,14 +69,22 @@ public sealed class PermissionsController : ControllerBase
       [FromBody] RevokePermissionRequest request,
       CancellationToken cancellationToken)
   {
-    var key = new TupleKey(
-        request.ObjectType,
-        request.ObjectId,
-        request.Relation,
-        request.SubjectType,
-        request.SubjectId);
+    try
+    {
+      var key = new TupleKey(
+          request.ObjectType,
+          request.ObjectId,
+          request.Relation,
+          request.SubjectType,
+          request.SubjectId,
+          request.SubjectRelation);
 
-    await _permissionService.RevokeAsync(key, cancellationToken);
-    return NoContent();
+      await _permissionService.RevokeAsync(key, cancellationToken);
+      return NoContent();
+    }
+    catch (ArgumentException ex)
+    {
+      return BadRequest(new { error = ex.Message });
+    }
   }
 }

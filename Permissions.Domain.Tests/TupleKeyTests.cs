@@ -54,4 +54,23 @@ public sealed class TupleKeyTests
 
     Assert.NotEqual(a, b);
   }
+
+  [Fact]
+  public void Equality_UsesSubjectRelationAsSixthField()
+  {
+    var direct = new TupleKey("report", "42", "viewer", "group", "finance");
+    var member = new TupleKey("report", "42", "viewer", "group", "finance", "member");
+    var manager = new TupleKey("report", "42", "viewer", "group", "finance", "manager");
+
+    Assert.NotEqual(direct, member);
+    Assert.NotEqual(member, manager);
+    Assert.Equal(member, new TupleKey("report", "42", "viewer", "group", "finance", "member"));
+  }
+
+  [Theory]
+  [InlineData("")]
+  [InlineData("  ")]
+  public void Constructor_BlankSubjectRelation_IsRejected(string subjectRelation) =>
+      Assert.Throws<ArgumentException>(() => new TupleKey(
+          "report", "42", "viewer", "group", "finance", subjectRelation));
 }
