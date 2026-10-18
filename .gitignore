@@ -5,6 +5,9 @@
 
 # dotenv files
 .env
+.env.*
+!.env.example
+!.env.*.example
 
 # User-specific files
 *.rsuser
@@ -334,6 +337,15 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+dist/
+.coverage*
+htmlcov/
+*.sqlite
+*.sqlite3
 
 # Cake - Uncomment if you are using it
 # tools/**

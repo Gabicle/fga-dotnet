@@ -232,6 +232,19 @@ dotnet list Permissions.slnx package --vulnerable --include-transitive
 
 The fixture accepts only explicit targets named `permissions_integration_disposable` or `permissions_integration_disposable_<lowercase letters or digits>`; the migration test creates similarly protected `permissions_tuple_migration_disposable_<id>` databases. It rejects `postgres`, `template0`, `template1`, malformed connection strings, and missing authorization. The application database and the integration-test database must remain separate.
 
+### Independent Python contract example
+
+Python 3.12 and the standard library are sufficient to run the isolated
+[Python authorization contract example](python_contract/README.md):
+
+```bash
+python3 -m unittest discover -s python_contract/tests -v
+```
+
+The example has a simulated protected operation, strict fail-closed response
+parsing, and a live proof script that creates its own disposable test grants.
+It is separate from any AI agent or application business logic.
+
 ### Service authentication
 
 Send `Authorization: ApiKey <base64-key>` on every request. The check key has only the `permissions.check` capability and can call `POST /api/permissions/check`. The separate admin key has only `permissions.admin` and can grant or revoke tuples and use every `/api/roles` endpoint, including reads. Other endpoints require an authenticated service by default. Missing or invalid credentials receive HTTP 401; a valid key without the required capability receives HTTP 403.
