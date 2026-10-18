@@ -50,7 +50,7 @@ public sealed class RoleServiceTests
   }
 
   [Fact]
-  public async Task CreateAsync_DuplicateName_ThrowsInvalidOperationException()
+  public async Task CreateAsync_DuplicateName_ThrowsRoleConflictException()
   {
     var existing = Role.Create("viewer");
 
@@ -58,12 +58,12 @@ public sealed class RoleServiceTests
         .Setup(r => r.GetByNameAsync("VIEWER", default))
         .ReturnsAsync(existing);
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    await Assert.ThrowsAsync<RoleConflictException>(() =>
         _service.CreateAsync(new CreateRoleRequest("viewer")));
   }
 
   [Fact]
-  public async Task CreateAsync_WithInvalidParentRoleId_ThrowsInvalidOperationException()
+  public async Task CreateAsync_WithInvalidParentRoleId_ThrowsRoleNotFoundException()
   {
     _roleRepo
         .Setup(r => r.GetByNameAsync("EDITOR", default))
@@ -73,7 +73,7 @@ public sealed class RoleServiceTests
         .Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), default))
         .ReturnsAsync((Role?)null);
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    await Assert.ThrowsAsync<RoleNotFoundException>(() =>
         _service.CreateAsync(new CreateRoleRequest("editor", ParentRoleId: Guid.NewGuid())));
   }
 
@@ -130,7 +130,7 @@ public sealed class RoleServiceTests
     _roleRepo.Setup(r => r.GetInheritanceChainAsync(role.Id, default))
         .ReturnsAsync([role]);
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    await Assert.ThrowsAsync<RoleConflictException>(() =>
         _service.AssignParentAsync(role.Id, role.Id));
     Assert.Null(role.ParentRoleId);
     _roleRepo.Verify(r => r.UpdateAsync(It.IsAny<Role>(), default), Times.Never);
@@ -149,7 +149,7 @@ public sealed class RoleServiceTests
     _roleRepo.Setup(r => r.GetInheritanceChainAsync(admin.Id, default))
         .ReturnsAsync([admin, editor, viewer]);
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    await Assert.ThrowsAsync<RoleConflictException>(() =>
         _service.AssignParentAsync(viewer.Id, admin.Id));
     Assert.Null(viewer.ParentRoleId);
     Assert.Equal(viewer.Id, editor.ParentRoleId);

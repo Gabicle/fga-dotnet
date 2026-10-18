@@ -179,7 +179,35 @@ public sealed class AuthenticationHttpTests
     })).Content.ReadFromJsonAsync<CheckPermissionResponse>();
 
     Assert.True(allowed?.Allowed);
+    Assert.Equal(AuthorizationReasonCodes.Allowed, allowed?.ReasonCode);
     Assert.False(denied?.Allowed);
+    Assert.Equal(AuthorizationReasonCodes.RelationshipDenied, denied?.ReasonCode);
+  }
+
+  [Fact]
+  public async Task RoleParentErrorsDistinguishMissingRolesFromHierarchyConflicts()
+  {
+    using var factory = new AuthApiFactory();
+    var existing = Role.Create("existing");
+    factory.Roles.Add(existing);
+    using var client = factory.CreateClient();
+    Authenticate(client, factory.AdminKey);
+
+    var missingRole = await client.PostAsJsonAsync(
+        $"/api/roles/{Guid.NewGuid()}/parent", new { parentRoleId = existing.Id });
+    var missingParent = await client.PostAsJsonAsync(
+        $"/api/roles/{existing.Id}/parent", new { parentRoleId = Guid.NewGuid() });
+    var cycle = await client.PostAsJsonAsync(
+        $"/api/roles/{existing.Id}/parent", new { parentRoleId = existing.Id });
+    var createWithMissingParent = await client.PostAsJsonAsync(
+        "/api/roles", new { name = "orphan", parentRoleId = Guid.NewGuid() });
+
+    Assert.Equal(HttpStatusCode.NotFound, missingRole.StatusCode);
+    Assert.Equal(HttpStatusCode.NotFound, missingParent.StatusCode);
+    Assert.Equal(HttpStatusCode.NotFound, createWithMissingParent.StatusCode);
+    Assert.Equal(HttpStatusCode.Conflict, cycle.StatusCode);
+    Assert.Null(existing.ParentRoleId);
+    Assert.Single(factory.Roles);
   }
 
   [Fact]

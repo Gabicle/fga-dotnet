@@ -32,6 +32,7 @@ public sealed class PermissionCheckEngineTests
 
         Assert.True(result.Allowed);
         Assert.Equal("Allowed via tuple expansion", result.Reason);
+        Assert.Equal(AuthorizationReasonCodes.Allowed, result.ReasonCode);
     }
 
     [Fact]
@@ -51,6 +52,7 @@ public sealed class PermissionCheckEngineTests
 
         Assert.False(result.Allowed);
         Assert.Equal("No matching tuple found", result.Reason);
+        Assert.Equal(AuthorizationReasonCodes.RelationshipDenied, result.ReasonCode);
     }
 
     [Fact]

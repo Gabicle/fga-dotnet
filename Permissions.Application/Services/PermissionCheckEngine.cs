@@ -36,8 +36,8 @@ public sealed class PermissionCheckEngine
         cancellationToken);
 
     return allowed
-        ? new CheckPermissionResponse(true, "Allowed via tuple expansion")
-        : new CheckPermissionResponse(false, "No matching tuple found");
+        ? new CheckPermissionResponse(true, "Allowed via tuple expansion", AuthorizationReasonCodes.Allowed)
+        : new CheckPermissionResponse(false, "No matching tuple found", AuthorizationReasonCodes.RelationshipDenied);
   }
 
   private async Task<bool> ExpandAsync(

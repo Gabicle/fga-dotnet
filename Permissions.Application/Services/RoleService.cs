@@ -31,8 +31,7 @@ public sealed class RoleService
         request.Name.ToUpperInvariant(), cancellationToken);
 
     if (existing is not null)
-      throw new InvalidOperationException(
-          $"Role '{request.Name}' already exists.");
+      throw new RoleConflictException();
 
     var role = Role.Create(request.Name, request.Description);
 
@@ -42,8 +41,7 @@ public sealed class RoleService
           request.ParentRoleId.Value, cancellationToken);
 
       if (parentRole is null)
-        throw new InvalidOperationException(
-            $"Parent role '{request.ParentRoleId}' not found.");
+        throw new RoleNotFoundException();
 
       await _roleRepository.GetInheritanceChainAsync(parentRole.Id, cancellationToken);
       role.SetParentId(parentRole.Id);
@@ -86,15 +84,18 @@ public sealed class RoleService
       Guid roleId, Guid parentRoleId, CancellationToken cancellationToken)
   {
     var role = await _roleRepository.GetByIdAsync(roleId, cancellationToken)
-        ?? throw new InvalidOperationException($"Role '{roleId}' not found.");
+        ?? throw new RoleNotFoundException();
 
     var parentRole = await _roleRepository.GetByIdAsync(parentRoleId, cancellationToken)
-        ?? throw new InvalidOperationException($"Parent role '{parentRoleId}' not found.");
+        ?? throw new RoleNotFoundException();
+
+    if (role.Id == parentRole.Id)
+      throw new RoleConflictException();
 
     var parentChain = await _roleRepository.GetInheritanceChainAsync(
         parentRole.Id, cancellationToken);
     if (parentChain.Any(ancestor => ancestor.Id == role.Id))
-      throw new InvalidOperationException("A role cannot be assigned one of its descendants as a parent.");
+      throw new RoleConflictException();
 
     role.SetParent(parentRole);
     await _roleRepository.UpdateAsync(role, cancellationToken);

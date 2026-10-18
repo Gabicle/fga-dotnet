@@ -299,7 +299,7 @@ Content-Type: application/json
 Response:
 
 ```json
-{ "allowed": true, "reason": "Allowed via tuple expansion" }
+{ "allowed": true, "reason": "Allowed via tuple expansion", "reasonCode": "authorization_allowed" }
 ```
 
 This example assumes a matching `document:42#viewer@user:7` tuple. Documents
@@ -338,7 +338,7 @@ Content-Type: application/json
 Response:
 
 ```json
-{ "allowed": false, "reason": "Denied by ABAC policy: RegionMatchPolicy" }
+{ "allowed": false, "reason": "Denied by ABAC policy: RegionMatchPolicy", "reasonCode": "required_abac_denied" }
 ```
 
 For checks, HTTP 200 with `allowed: false` is an authorization denial. Missing or
@@ -347,6 +347,43 @@ failures return an error, not an allow response. The calling service must treat
 every non-successful check response as denied access. Existing `report/viewer`
 and `report/editor` callers must now supply the required attributes; other
 unlisted operations retain ReBAC-only behavior.
+
+### Check result and decision audit contract
+
+Every request that reaches the check action receives an `X-Authorization-Decision-Id`
+response header. A single structured `AuthorizationDecision` log event (event ID
+`1001`) carries that ID, authenticated service identity, checked subject and
+object type/ID and relation, `Outcome` (`allow`, `deny`, or `error`), `ReasonCode`,
+`DurationMs`, and `HttpStatus`. A client disconnect can have `HttpStatus=0` because
+no completed HTTP response is guaranteed. Authentication and JSON-binding failures
+occur before this action and have no decision event or decision ID. They are not
+completed authorization decisions.
+
+HTTP 200 preserves `allowed` and `reason` and adds `reasonCode`. The stable codes
+are `authorization_allowed`, `relationship_denied`, and `required_abac_denied`.
+Malformed authorization context handled by the action returns HTTP 400 with
+`reasonCode: invalid_authorization_context`; evaluation or database failure
+returns HTTP 500 with `reasonCode: authorization_evaluation_error`. These errors
+do not contain `allowed: true` or internal exception details. The existing `reason`
+text is explanatory; consumers should use `allowed`, HTTP status, and `reasonCode`
+for decisions. Allow a protected action only after HTTP 200 with a valid response
+containing `allowed: true`; deny on any other response, timeout, or connection error.
+
+Decision logs contain the checked identifiers, which may be sensitive metadata.
+Use opaque identifiers in requests, restrict log access to authorization service
+operators, and set a documented retention period in the deployment logging sink
+(30 days is a reasonable starting point for this project). Do not place names,
+emails, credentials, or secrets in identifier fields. The decision event omits API
+keys, raw ABAC attributes, document content, and exception text. This service does
+not itself enforce log retention or authenticate the asserted end-user identity.
+Configure the logging sink to retain `Information` events from
+`Permissions.Api.Controllers.PermissionsController`; filtering those events out
+disables decision audit records.
+
+Role-parent assignment returns HTTP 404 for a missing role or parent, HTTP 409
+for a hierarchy conflict such as a cycle, and HTTP 204 on success. Role creation
+with a missing parent also returns HTTP 404. Internal hierarchy failures return
+HTTP 500 without exception details.
 
 ### Revoke a permission
 

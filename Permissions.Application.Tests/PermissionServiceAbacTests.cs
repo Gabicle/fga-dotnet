@@ -74,7 +74,7 @@ public sealed class PermissionServiceAbacTests
     var request = omitSubject
         ? Request() with { SubjectAttributes = null }
         : Request() with { ResourceAttributes = null };
-    await Assert.ThrowsAsync<ArgumentException>(() => Service().CheckAsync(request));
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() => Service().CheckAsync(request));
   }
 
   [Theory]
@@ -97,7 +97,7 @@ public sealed class PermissionServiceAbacTests
       SensitivityLevel = missing == "sensitivity" ? null : 2,
       Status = missing == "status" ? null : "draft"
     };
-    await Assert.ThrowsAsync<ArgumentException>(() =>
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() =>
         Service().CheckAsync(request with {
           SubjectAttributes = subject, ResourceAttributes = resource
         }));
@@ -119,7 +119,7 @@ public sealed class PermissionServiceAbacTests
       ResourceId = mismatch == "resource" ? "43" : "42",
       Region = "eu-west", SensitivityLevel = 2, Status = "draft"
     };
-    await Assert.ThrowsAsync<ArgumentException>(() =>
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() =>
         Service().CheckAsync(request with {
           SubjectAttributes = subject, ResourceAttributes = resource
         }));
@@ -148,6 +148,7 @@ public sealed class PermissionServiceAbacTests
     });
     Assert.False(result.Allowed);
     Assert.Contains(policy, result.Reason);
+    Assert.Equal(AuthorizationReasonCodes.RequiredAbacDenied, result.ReasonCode);
   }
 
   [Fact]
@@ -158,7 +159,7 @@ public sealed class PermissionServiceAbacTests
       ResourceType = "report", ResourceId = "42", Region = "eu-west",
       SensitivityLevel = 2, Status = "unrecognized"
     };
-    await Assert.ThrowsAsync<ArgumentException>(() =>
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() =>
         Service().CheckAsync(request with { ResourceAttributes = resource }));
   }
 

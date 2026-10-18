@@ -84,7 +84,7 @@ public sealed partial class PermissionIntegrationTests : IntegrationTestBase
     await PermissionService.GrantAsync(new GrantPermissionRequest(
         "user", "7", "viewer", "document", "42"));
 
-    await Assert.ThrowsAsync<ArgumentException>(() => PermissionService.CheckAsync(
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() => PermissionService.CheckAsync(
         new CheckPermissionRequest("user", "7", "viewer", "report", "42")));
     Assert.True((await PermissionService.CheckAsync(new CheckPermissionRequest(
         "user", "7", "viewer", "document", "42"))).Allowed);
@@ -104,7 +104,7 @@ public sealed partial class PermissionIntegrationTests : IntegrationTestBase
       }
     };
 
-    await Assert.ThrowsAsync<ArgumentException>(() => PermissionService.CheckAsync(spoofed));
+    await Assert.ThrowsAsync<InvalidAuthorizationContextException>(() => PermissionService.CheckAsync(spoofed));
     Assert.True((await PermissionService.CheckAsync(valid)).Allowed);
   }
 
@@ -318,8 +318,8 @@ public sealed partial class PermissionIntegrationTests : IntegrationTestBase
     var editor = await RoleService.CreateAsync(new CreateRoleRequest("editor", ParentRoleId: viewer.Id));
     var admin = await RoleService.CreateAsync(new CreateRoleRequest("admin", ParentRoleId: editor.Id));
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() => RoleService.AssignParentAsync(viewer.Id, viewer.Id));
-    await Assert.ThrowsAsync<InvalidOperationException>(() => RoleService.AssignParentAsync(viewer.Id, admin.Id));
+    await Assert.ThrowsAsync<RoleConflictException>(() => RoleService.AssignParentAsync(viewer.Id, viewer.Id));
+    await Assert.ThrowsAsync<RoleConflictException>(() => RoleService.AssignParentAsync(viewer.Id, admin.Id));
 
     Assert.Null((await RoleService.GetByIdAsync(viewer.Id))!.ParentRoleId);
     Assert.Equal(viewer.Id, (await RoleService.GetByIdAsync(editor.Id))!.ParentRoleId);
@@ -443,7 +443,7 @@ public sealed partial class PermissionIntegrationTests : IntegrationTestBase
     var b = await RoleService.CreateAsync(new CreateRoleRequest("B"));
     using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
 
-    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+    await Assert.ThrowsAsync<RoleConflictException>(() =>
         AssignInNewScopeAsync(a.Id, a.Id, timeout.Token));
     Assert.Null((await RoleService.GetByIdAsync(a.Id))!.ParentRoleId);
 

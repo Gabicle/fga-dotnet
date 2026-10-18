@@ -27,6 +27,7 @@ public sealed class PermissionService
       CheckPermissionRequest request,
       CancellationToken cancellationToken = default)
   {
+    ValidateCheckedIdentity(request);
     var requirement = AbacRequirements.For(request.ObjectType, request.Relation);
     ValidateAttributeIdentities(request, requirement is not null);
     if (requirement is not null)
@@ -55,9 +56,20 @@ public sealed class PermissionService
     if (!abacResult.IsAllowed)
       return new CheckPermissionResponse(
           false,
-          $"Denied by ABAC policy: {abacResult.DeniedByPolicy}");
+          $"Denied by ABAC policy: {abacResult.DeniedByPolicy}",
+          AuthorizationReasonCodes.RequiredAbacDenied);
 
     return tupleResult;
+  }
+
+  private static void ValidateCheckedIdentity(CheckPermissionRequest request)
+  {
+    if (string.IsNullOrWhiteSpace(request.SubjectType) ||
+        string.IsNullOrWhiteSpace(request.SubjectId) ||
+        string.IsNullOrWhiteSpace(request.ObjectType) ||
+        string.IsNullOrWhiteSpace(request.ObjectId) ||
+        string.IsNullOrWhiteSpace(request.Relation))
+      throw new InvalidAuthorizationContextException();
   }
 
   private static void ValidateAttributeIdentities(
@@ -81,12 +93,12 @@ public sealed class PermissionService
     if (string.IsNullOrWhiteSpace(supplied))
     {
       if (required)
-        throw new ArgumentException("Required ABAC identity is missing.");
+        throw new InvalidAuthorizationContextException();
       return;
     }
 
     if (!string.Equals(supplied, expected, StringComparison.Ordinal))
-      throw new ArgumentException("ABAC identity does not match the checked identity.");
+      throw new InvalidAuthorizationContextException();
   }
 
   private static void ValidateRequiredAttributes(
@@ -95,17 +107,17 @@ public sealed class PermissionService
     var subject = request.SubjectAttributes;
     var resource = request.ResourceAttributes;
     if (subject is null || resource is null)
-      throw new ArgumentException("Required ABAC attribute objects are missing.");
+      throw new InvalidAuthorizationContextException();
 
     if (string.IsNullOrWhiteSpace(subject.Region) ||
         string.IsNullOrWhiteSpace(resource.Region) ||
         !subject.ClearanceLevel.HasValue || !resource.SensitivityLevel.HasValue)
-      throw new ArgumentException("Required ABAC policy attributes are missing.");
+      throw new InvalidAuthorizationContextException();
 
     if (requirement.RequiresStatus &&
         (string.IsNullOrWhiteSpace(resource.Status) ||
          !AbacRequirements.IsSupportedReportStatus(resource.Status)))
-      throw new ArgumentException("Resource status is missing or unsupported for this operation.");
+      throw new InvalidAuthorizationContextException();
   }
 
   public async Task GrantAsync(
