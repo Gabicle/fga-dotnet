@@ -8,6 +8,12 @@
 .env.*
 !.env.example
 !.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets/
+credentials/
 
 # User-specific files
 *.rsuser
